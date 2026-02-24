@@ -1,0 +1,10 @@
+{
+  "lib/maurograd/*.rb": {
+    "alternate": "test/maurograd/{}_test.rb",
+    "type": "source"
+  },
+  "test/maurograd/*_test.rb": {
+    "alternate": "lib/maurograd/{}.rb",
+    "type": "test"
+  }
+}

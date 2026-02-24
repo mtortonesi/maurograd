@@ -2,7 +2,7 @@
 # Read content of file moons.csv, containing the coordinates of a point on a 2D
 # plane and the respective label into a data structure
 require 'csv'
-require_relative '../../lib/mlp'
+require 'maurograd/scalar'
 
 def batches(inputs, labels, batch_size)
   idx = (0...inputs.length).to_a.shuffle
@@ -14,10 +14,10 @@ end
 dataset = CSV.read("moons.csv", headers: true)
 
 # Create a neural network to predict the label of a point based on its coordinates
-# mlp = MLP.new(layer_sizes: [2, 5, 5, 1])
-mlp = MLP.new(layer_sizes: [2, 15, 13, 7, 1])
+# mlp = Maurograd::Scalar::MLP.new(layer_sizes: [2, 5, 5, 1])
+mlp = Maurograd::Scalar::MLP.new(layer_sizes: [2, 15, 13, 7, 1])
 
-# Divide the data into training and test sets: 80% for training and 20% for testingdataset
+# Divide the data into training and test sets: 80% for training and 20% for testing dataset
 train_set = { inputs: [], labels: [] }
 test_set = { inputs: [], labels: [] }
 dataset.each_with_index do |row, i|
@@ -60,8 +60,9 @@ epochs.times do |i|
 
     # First, set all of the parameter gradients to 0 so that we don't accumulate
     # gradients from previous iterations
-    mlp.parameters.each { |p| p.gradient = 0 }
+    loss.zero_grad!
 
+    # Backpropagate the loss to compute gradients
     loss.backpropagate
 
     losses << loss.data

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EXT_DIR="${ROOT_DIR}/ext/maurograd_ext"
+
+if [[ ! -d "${EXT_DIR}" ]]; then
+  echo "ERROR: extension dir not found: ${EXT_DIR}" >&2
+  echo "Edit bin/build_ext and set EXT_DIR to the correct path." >&2
+  exit 1
+fi
+
+cd "${EXT_DIR}"
+
+cmd="${1:-build}"
+
+case "${cmd}" in
+  build)
+    echo "[build_ext] Running extconf.rb in ${EXT_DIR}"
+    bundle exec ruby extconf.rb
+
+    echo "[build_ext] Building native extension (make)"
+    make
+    ;;
+
+  clean)
+    echo "[build_ext] Cleaning build artifacts (make clean)"
+    make clean || true
+    ;;
+
+  rebuild)
+    echo "[build_ext] Rebuilding (clean + extconf + make)"
+    make clean || true
+    bundle exec ruby extconf.rb
+    make
+    ;;
+
+  *)
+    echo "Usage: ./bin/build_ext [build|clean|rebuild]" >&2
+    exit 2
+    ;;
+esac
+
+echo "[build_ext] Done."
+echo "[build_ext] Built artifacts:"
+ls -1 "${EXT_DIR}"/maurograd_ext.{bundle,so} 2>/dev/null || true
+
