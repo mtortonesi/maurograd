@@ -133,7 +133,7 @@ module Maurograd
 
           Maurograd::Utils.assert_finite!(dx, where: "CEWithLogits backward: dx")
 
-          logits.grad = logits.grad ? (logits.grad + dx) : dx
+          logits.accumulate_grad(dx)
         end
 
         # Optional target gradient (rarely needed). Implemented for completeness.
@@ -147,8 +147,7 @@ module Maurograd
           # but we used stable logsumexp forward; keeping it simple here:
           log_probs = Numo::NMath.log(@softmax)
           dt = -(log_probs * (gout / @n.to_f))
-          # dt = Utils.unbroadcast(dt, target.shape)
-          target.grad = target.grad ? (target.grad + dt) : dt
+          target.accumulate_grad(dt)
         end
       end
     end

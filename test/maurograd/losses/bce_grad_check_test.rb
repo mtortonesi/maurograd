@@ -41,19 +41,14 @@ describe "BCE gradient check" do
     expect(diff).to be < tol
   end
 
-  it "handles broadcasting-like patterns safely (unbroadcast correctness signal)" do
-    eps = 1e-8
-
-    # pred is [N, C] but target is [1, C] (broadcast over batch)
+  it "raises when pred and target shapes differ" do
+    # pred is [N, C] but target is [1, C]: BCE requires exact shape match,
+    # it does not broadcast target over the batch.
     p = Maurograd::Tensor.new(Numo::SFloat[[0.2, 0.7],
                                           [0.9, 0.1]], requires_grad: true)
     y = Maurograd::Tensor.new(Numo::SFloat[[0.0, 1.0]], requires_grad: true)
 
-    loss = Maurograd::Losses::BCE.apply(p, y, eps: eps)
-    loss.backward
-
-    # Shape of y.grad must match y.shape exactly (like bias grad checks).
-    expect(y.grad.shape).to be == y.shape
+    expect { Maurograd::Losses::BCE.apply(p, y) }.to raise_exception
   end
 end
 

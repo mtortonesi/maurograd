@@ -1,5 +1,4 @@
 require_relative '../tensor'
-require_relative '../utils/utils'
 
 module Maurograd
   module Losses
@@ -7,7 +6,7 @@ module Maurograd
     #
     # Given:
     #   pred   (Tensor)
-    #   target (Tensor or constant Tensor)
+    #   target (Tensor), with the exact same shape as pred
     #
     # Returns a scalar loss:
     #   mean((pred - target)^2)
@@ -32,6 +31,10 @@ module Maurograd
 
       def forward
         pred, target = @inputs
+
+        unless pred.shape == target.shape
+          raise "MSE expects pred and target to have the same shape, got #{pred.shape.inspect} and #{target.shape.inspect}"
+        end
 
         # Compute diff in raw Numo space (simple, reliable).
         @diff = pred.data - target.data
@@ -58,12 +61,12 @@ module Maurograd
 
         if pred.requires_grad
           gpred = scale * @diff
-          pred.backward(Utils.unbroadcast(gpred, pred.shape))
+          pred.accumulate_grad(gpred)
         end
 
         if target.requires_grad
           gtgt = -scale * @diff
-          target.backward(Utils.unbroadcast(gtgt, target.shape))
+          target.accumulate_grad(gtgt)
         end
       end
     end

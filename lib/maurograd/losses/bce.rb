@@ -1,5 +1,4 @@
 require_relative '../tensor'
-require_relative '../utils/utils'
 
 module Maurograd
   module Losses
@@ -18,7 +17,7 @@ module Maurograd
     #
     # Parameters:
     # - pred:   Tensor of probabilities (0..1), any shape
-    # - target: Tensor (or constant tensor) with same shape or broadcastable to pred
+    # - target: Tensor with the exact same shape as pred
     # - eps: small constant for numerical stability
     class BCE
       def self.apply(pred, target, eps: 1e-8)
@@ -37,6 +36,10 @@ module Maurograd
 
       def forward
         pred, target = @inputs
+
+        unless pred.shape == target.shape
+          raise "BCE expects pred and target to have the same shape, got #{pred.shape.inspect} and #{target.shape.inspect}"
+        end
 
         # Cache raw arrays for backward.
         @p = pred.data
@@ -69,7 +72,7 @@ module Maurograd
         gpred = gout * dldp
 
         if pred.requires_grad
-          pred.backward(Utils.unbroadcast(gpred, pred.shape))
+          pred.accumulate_grad(gpred)
         end
 
         # Optional: gradient w.r.t. target (rarely used in practice),
@@ -79,7 +82,7 @@ module Maurograd
         if target.requires_grad
           dldy = -inv_n * (Numo::NMath.log(@p + @eps) - Numo::NMath.log(1.0 - @p + @eps))
           gtgt = gout * dldy
-          target.backward(Utils.unbroadcast(gtgt, target.shape))
+          target.accumulate_grad(gtgt)
         end
       end
     end
