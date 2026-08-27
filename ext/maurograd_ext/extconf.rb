@@ -29,11 +29,17 @@ have_header('numo/narray.h') or abort 'numo/narray.h not found even after adding
 
 # Find OpenBLAS include and lib paths
 
-# Prefer Homebrew OpenBLAS if present
+# Try pkg-config first (portable across distros; how apt's libopenblas-dev
+# and most Linux package managers register themselves).
+pkg_config('openblas')
+
+# Prefer Homebrew OpenBLAS if present; otherwise fall back to common
+# Linux system prefixes (apt's libopenblas-dev installs under plain /usr).
 openblas_candidates = [
   ENV['OPENBLAS_DIR'],
   '/opt/homebrew/opt/openblas',   # Apple Silicon
-  '/usr/local/opt/openblas'       # Intel Homebrew
+  '/usr/local/opt/openblas',      # Intel Homebrew
+  '/usr'                          # common Linux system install
 ].compact.uniq
 
 openblas_inc = nil
