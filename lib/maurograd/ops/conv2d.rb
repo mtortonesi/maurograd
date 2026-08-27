@@ -145,7 +145,7 @@ module Maurograd
           @workspace
         )
 
-        if bias.grad && bias.grad.shape != db.shape
+        if bias && bias.grad && bias.grad.shape != db.shape
           raise "db shape mismatch: grad=#{bias.grad.shape} db=#{db.shape}"
         end
 
