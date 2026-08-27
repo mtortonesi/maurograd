@@ -7,7 +7,7 @@ module Maurograd
 
         if shuffle
           rng = Random.new(seed)
-          idx = idx.sort_by { rng.rand }
+          idx = idx.shuffle(random: rng)
         end
 
         Enumerator.new do |enum|
