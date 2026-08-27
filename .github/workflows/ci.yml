@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # Skip bench-only (torch-rb) and examples-only (chunky_png, erv, csv)
+      # dependencies - the library and test suite don't need them. (sus
+      # itself lives in the implicit :development group Bundler creates for
+      # gemspec-declared development dependencies, so :development can't be
+      # excluded here without also losing sus.)
+      BUNDLE_WITHOUT: bench:examples
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenBLAS (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+
+      - name: Install OpenBLAS (macOS)
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: brew install openblas
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+
+      - name: Lint
+        run: bundle exec bake lint
+
+      - name: Build extension and run test suite
+        run: bundle exec bake ci
