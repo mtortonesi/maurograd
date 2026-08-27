@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
 set -e
 
-export NUMO_LINALG_BACKEND=openblas
-export OPENBLAS_LIBPATH="$(brew --prefix openblas)/lib"
-
 exec bundle exec ruby "$@"
-
