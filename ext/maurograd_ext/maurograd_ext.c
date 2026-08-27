@@ -439,7 +439,7 @@ typedef struct {
 
     bool have_col;
 
-    /* For debugging */
+    // Non-finite guard: checked after each step, surfaced as a Ruby exception.
     int bad;        // 0 ok, 1 found non-finite
     int bad_where;  // 1=dout2d, 2=dw, 3=dcol, 4=dx, 5=db
 } conv2d_bwd_args;
@@ -455,17 +455,11 @@ static void* conv2d_backward_nogvl(void *ptr)
     }
 
 
-    // printf("absmax(dout): %f\n", fabs(a->dout[0])); // DEBUG
-
     // 1) pack dout -> dout2d
     pack_dout2d_nchw(a->dout, a->dout2d, a->N, a->Cout, a->OH, a->OW);
 
-    // printf("absmax(dout): %f\n", fabs(a->dout[0])); // DEBUG
-
-    // DEBUG: dopo pack_dout2d_nchw
     if (a->dout2d) {
-        // opzionale: check su un subset per non spendere troppo
-        // ma qui puoi farlo pieno per debug
+        // Full-array check; could be restricted to a subset for speed.
         if (any_nonfinite(a->dout2d, (size_t)a->rows * (size_t)a->Cout)) {
             a->bad = 1; a->bad_where = 1; return NULL;
         }
@@ -474,12 +468,9 @@ static void* conv2d_backward_nogvl(void *ptr)
 
     // 2) db
     if (a->want_db && a->db) {
-        // fprintf(stderr, "db pre: %g %g %g\n", a->db[0], a->db[1], a->db[2]);
         reduce_dbias(a->dout2d, a->db, a->rows, a->Cout);
-        // fprintf(stderr, "db post: %g %g %g\n", a->db[0], a->db[1], a->db[2]);
     }
 
-    // DEBUG: dopo reduce_dbias
     if (a->want_db && a->db) {
         if (any_nonfinite(a->db, (size_t)a->Cout)) {
             a->bad = 1; a->bad_where = 5; return NULL;
@@ -511,7 +502,6 @@ static void* conv2d_backward_nogvl(void *ptr)
         // ma in realtà NON dovrebbe accadere (vedi fix 2 sotto).
     }
 
-    // DEBUG: dopo dw GEMM
     if (a->want_dw && a->dw) {
         if (any_nonfinite(a->dw, (size_t)a->Cout * (size_t)a->K)) {
             a->bad = 1; a->bad_where = 2; return NULL;
@@ -531,7 +521,6 @@ static void* conv2d_backward_nogvl(void *ptr)
                         0.0f,
                         a->dcol, a->K);
 
-            // DEBUG: dopo dcol GEMM
             if (a->want_dx && a->dcol) {
                 if (any_nonfinite(a->dcol, (size_t)a->rows * (size_t)a->K)) {
                     a->bad = 1; a->bad_where = 3; return NULL;
@@ -544,7 +533,6 @@ static void* conv2d_backward_nogvl(void *ptr)
                        a->stride, a->pad,
                        a->OH, a->OW);
 
-            // DEBUG: dopo col2im
             if (a->want_dx && a->dx) {
                 if (any_nonfinite(a->dx, (size_t)a->N * (size_t)a->C * (size_t)a->H * (size_t)a->W)) {
                     a->bad = 1; a->bad_where = 4; return NULL;
