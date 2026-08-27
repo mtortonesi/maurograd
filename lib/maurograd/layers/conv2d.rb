@@ -1,5 +1,6 @@
 require_relative '../tensor'
 require_relative '../ops/conv2d'
+require_relative '../utils/utils'
 
 module Maurograd
   module Layers
@@ -36,6 +37,7 @@ module Maurograd
       # - kernel_size:  integer (e.g. 3) or [kh, kw]
       # - stride:       convolution stride (default: 1)
       # - padding:      zero-padding applied to H and W (default: 0)
+      # - seed:         optional seed for reproducible weight initialization
       #
       # Weight tensor shape:
       #   [C_out, C_in, KH, KW]
@@ -63,7 +65,7 @@ module Maurograd
       # fan_in depends only on the number of *inputs* to each neuron,
       # not on out_channels.
       #
-      def initialize(in_channels, out_channels, kernel_size, stride: 1, padding: 0)
+      def initialize(in_channels, out_channels, kernel_size, stride: 1, padding: 0, seed: nil)
         @stride = stride
         @padding = padding
 
@@ -83,10 +85,7 @@ module Maurograd
         # Initialize weights with a normal distribution N(0, std).
         #
         # Shape: [C_out, C_in, KH, KW]
-        weight_data =
-          Numo::SFloat
-            .new(out_channels, in_channels, kh, kw)
-            .rand_norm(0, std)
+        weight_data = Maurograd::Utils.rand_norm(out_channels, in_channels, kh, kw, std: std, seed: seed)
 
         @weights = Maurograd::Tensor.new(weight_data, requires_grad: true)
 

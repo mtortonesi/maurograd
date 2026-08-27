@@ -129,6 +129,35 @@ module Maurograd
       end
     end
 
+    # Draws a Numo::SFloat array of `shape` from a Gaussian(mean, std).
+    #
+    # Without a seed, this is exactly Numo::SFloat#rand_norm.
+    #
+    # With a seed, it deliberately avoids Numo::NArray.rand_norm: that method
+    # draws from a single RNG that is global and process-wide (seeded to a
+    # fixed constant at load time, unless Numo::NArray.srand is called), so
+    # seeding it for one layer would silently perturb every other unrelated
+    # Numo random call for the rest of the process. Instead we use a private
+    # Random.new(seed) instance plus a Box-Muller transform, matching the
+    # same seeding pattern Datasets::Batching already uses, so a seed here
+    # affects only this call.
+    def self.rand_norm(*shape, mean: 0.0, std: 1.0, seed: nil)
+      return Numo::SFloat.new(*shape).rand_norm(mean, std) if seed.nil?
+
+      rng = Random.new(seed)
+      n = shape.reduce(1, :*)
+
+      data = Array.new(n) do
+        u1 = rng.rand
+        u1 = Float::EPSILON if u1 <= 0.0 # avoid log(0)
+        u2 = rng.rand
+        r = Math.sqrt(-2.0 * Math.log(u1))
+        mean + std * r * Math.cos(2.0 * Math::PI * u2)
+      end
+
+      Numo::SFloat.asarray(data).reshape(*shape)
+    end
+
     def self.clip_grad_norm_(params, max_norm, eps: 1e-6)
       # params: array of Tensor (model parameters).
       # Assumes p.grad is a Numo::NArray float.

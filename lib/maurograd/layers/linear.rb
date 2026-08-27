@@ -1,5 +1,6 @@
 require_relative '../tensor'
 require_relative '../ops/linear'
+require_relative '../utils/utils'
 
 module Maurograd
   module Layers
@@ -13,7 +14,8 @@ module Maurograd
     class Linear
       attr_accessor :weights, :bias
 
-      def initialize(in_features, out_features, bias: true)
+      # - seed: optional seed for reproducible weight initialization
+      def initialize(in_features, out_features, bias: true, seed: nil)
         # He initialization is usually associated with ReLU.
         # For a generic Linear layer, Xavier (Glorot) is also common.
         # We'll keep He for consistency with your Conv2D layer style,
@@ -21,7 +23,7 @@ module Maurograd
         fan_in = in_features
         std = Math.sqrt(2.0 / fan_in)
 
-        w = Numo::SFloat.new(out_features, in_features).rand_norm(0, std)
+        w = Maurograd::Utils.rand_norm(out_features, in_features, std: std, seed: seed)
         @weights = Maurograd::Tensor.new(w, requires_grad: true)
 
         if bias
