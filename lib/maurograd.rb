@@ -1,8 +1,11 @@
 # Maurograd (Tensor/Numo autograd) - default entrypoint.
 #
-# This file intentionally requires an explicit, minimal set of files.
-# We avoid directory-wide autoload (Dir[...] require) to prevent accidentally
-# loading legacy/scalar code and to keep the public API predictable.
+# This file intentionally requires an explicit, minimal set of files
+# (rather than a directory-wide Dir[...] require) to keep the public API
+# predictable.
+#
+# The original micrograd-style scalar engine this project started as now
+# lives in its own repo: https://github.com/mtortonesi/maurograd_scalar
 
 require_relative 'maurograd/bootstrap'
 

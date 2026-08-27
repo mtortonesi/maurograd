@@ -15,14 +15,23 @@ approach. For simplicity, GEMM is performed with
 [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS). (In general, I hate the
 idea of developing C extensions for Ruby, but they are perfect for this task.)
 
+The original scalar-valued micrograd clone this project started as now lives
+on its own, unchanged, in
+[maurograd_scalar](https://github.com/mtortonesi/maurograd_scalar) — worth a
+look if you want to see backpropagation with nothing but plain Ruby arithmetic
+in the way.
+
 
 ## Examples
 
-While a full documentation will come down the road, Maurograd comes with two
-ANN classifier examples that should explain how to use the framework: an MLP
-classifier for the two moons dataset (along with a script to generate the
-corresponding dataset) and a multi-class classifier for the digit recognition
-on the MNIST datase based on the LeNet CNN architecture.
+While a full documentation will come down the road, Maurograd comes with an
+ANN classifier example that should explain how to use the framework: a
+multi-class classifier for digit recognition on the MNIST dataset, based on
+the LeNet CNN architecture.
+
+(An MLP classifier for the two moons dataset also exists, but it's built on
+the scalar-valued engine, so it now lives in
+[maurograd_scalar](https://github.com/mtortonesi/maurograd_scalar) instead.)
 
 
 
