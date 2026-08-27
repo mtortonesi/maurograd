@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/losses/bce'
+require "maurograd/tensor"
+require "maurograd/losses/bce"
 
 describe "BCE gradient check" do
   it "matches numerical gradient on one pred element" do
@@ -9,12 +9,12 @@ describe "BCE gradient check" do
 
     # pred in (0,1)
     p_data = Numo::SFloat[[0.2, 0.7, 0.4],
-                          [0.9, 0.1, 0.6]]
+      [0.9, 0.1, 0.6]]
     y_data = Numo::SFloat[[0.0, 1.0, 1.0],
-                          [1.0, 0.0, 0.0]]
+      [1.0, 0.0, 0.0]]
 
     pred = Maurograd::Tensor.new(p_data.copy, requires_grad: true)
-    y    = Maurograd::Tensor.new(y_data, requires_grad: false)
+    y = Maurograd::Tensor.new(y_data, requires_grad: false)
 
     loss = Maurograd::Losses::BCE.apply(pred, y, eps: eps)
     loss.backward
@@ -45,10 +45,9 @@ describe "BCE gradient check" do
     # pred is [N, C] but target is [1, C]: BCE requires exact shape match,
     # it does not broadcast target over the batch.
     p = Maurograd::Tensor.new(Numo::SFloat[[0.2, 0.7],
-                                          [0.9, 0.1]], requires_grad: true)
+      [0.9, 0.1]], requires_grad: true)
     y = Maurograd::Tensor.new(Numo::SFloat[[0.0, 1.0]], requires_grad: true)
 
     expect { Maurograd::Losses::BCE.apply(p, y) }.to raise_exception
   end
 end
-

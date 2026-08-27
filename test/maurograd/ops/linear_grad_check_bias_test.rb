@@ -1,7 +1,7 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/linear'
-require 'maurograd/ops/power'
-require 'maurograd/ops/sum'
+require "maurograd/tensor"
+require "maurograd/ops/linear"
+require "maurograd/ops/power"
+require "maurograd/ops/sum"
 
 describe "Linear bias grad-check (multi out_features)" do
   it "matches numerical gradient for one bias element and keeps correct shape" do
@@ -38,4 +38,3 @@ describe "Linear bias grad-check (multi out_features)" do
     expect(diff).to be < tol
   end
 end
-

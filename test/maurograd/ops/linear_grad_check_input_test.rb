@@ -1,7 +1,7 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/linear'
-require 'maurograd/ops/power'
-require 'maurograd/ops/sum'
+require "maurograd/tensor"
+require "maurograd/ops/linear"
+require "maurograd/ops/power"
+require "maurograd/ops/sum"
 
 describe "Linear grad-check (input element)" do
   it "matches numerical gradient for one input element" do
@@ -37,4 +37,3 @@ describe "Linear grad-check (input element)" do
     expect(diff).to be < tol
   end
 end
-

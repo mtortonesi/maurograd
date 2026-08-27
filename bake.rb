@@ -29,6 +29,17 @@ def ci
   system("bundle", "exec", "sus", exception: true)
 end
 
+# Check code style with Standard (see .standard.yml for the couple of
+# exceptions we actually need).
+def lint
+  system("bundle", "exec", "standardrb", exception: true)
+end
+
+# Auto-correct what Standard can fix safely.
+def lint_fix
+  system("bundle", "exec", "standardrb", "--fix", exception: true)
+end
+
 private
 
 def run_build_ext(subcommand)

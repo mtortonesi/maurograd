@@ -7,7 +7,7 @@ module Maurograd
       "/usr/lib/x86_64-linux-gnu",
       "/usr/lib/aarch64-linux-gnu",
       "/usr/local/lib",
-      "/usr/lib",
+      "/usr/lib"
     ].freeze
 
     def self.ensure_openblas!
@@ -25,7 +25,7 @@ module Maurograd
     def self.detect_via_homebrew
       brew = `brew --prefix openblas`.strip
       brew.empty? ? nil : File.join(brew, "lib")
-    rescue StandardError
+    rescue
       nil
     end
 
@@ -33,7 +33,7 @@ module Maurograd
       output = `ldconfig -p`
       line = output.each_line.find { |l| l.include?("libopenblas") }
       libpath_from_ldconfig_line(line)
-    rescue StandardError
+    rescue
       nil
     end
 

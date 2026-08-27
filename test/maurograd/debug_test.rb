@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/utils/utils'
+require "maurograd/tensor"
+require "maurograd/utils/utils"
 
 describe "Maurograd.debug" do
   it "is off by default" do

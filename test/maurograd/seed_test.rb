@@ -1,6 +1,6 @@
-require 'maurograd/tensor'
-require 'maurograd/layers/conv2d'
-require 'maurograd/layers/linear'
+require "maurograd/tensor"
+require "maurograd/layers/conv2d"
+require "maurograd/layers/linear"
 
 describe "Maurograd.seed!" do
   it "makes unseeded Conv2D weight init reproducible" do
@@ -47,7 +47,7 @@ describe "Maurograd.seed!" do
   end
 
   it "does not affect Datasets::Batching, which has its own independent seed" do
-    require 'maurograd/datasets/batching'
+    require "maurograd/datasets/batching"
     x = Numo::SFloat.new(6, 1, 2, 2).seq
     y = Numo::Int32.new(6).seq
 

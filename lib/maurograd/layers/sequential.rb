@@ -36,4 +36,3 @@ module Maurograd
     end
   end
 end
-

@@ -20,7 +20,7 @@ module Maurograd
 
       def forward
         tensor = @inputs.first
-        result_data = tensor.data ** @exponent
+        result_data = tensor.data**@exponent
 
         requires_grad = tensor.requires_grad
         result = Tensor.new(result_data, requires_grad: requires_grad)
@@ -34,7 +34,7 @@ module Maurograd
         return unless tensor.requires_grad
 
         # Local derivative: n * x^(n-1)
-        local_derivative = @exponent * (tensor.data ** (@exponent - 1))
+        local_derivative = @exponent * (tensor.data**(@exponent - 1))
 
         # Accumulate the gradient (chain rule)
         grad_input = grad_output * local_derivative

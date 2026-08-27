@@ -1,17 +1,17 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/linear'
+require "maurograd/tensor"
+require "maurograd/ops/linear"
 
 describe Maurograd::Ops::Linear do
   it "computes Y = X @ W^T + b with correct shape and values" do
     # X: [2,3]
     x = Maurograd::Tensor.new(Numo::SFloat[[1, 2, 3],
-                                          [4, 5, 6]], requires_grad: false)
+      [4, 5, 6]], requires_grad: false)
 
     # W: [4,3] (Out=4, In=3)
     w = Maurograd::Tensor.new(Numo::SFloat[[1, 0, 0],
-                                          [0, 1, 0],
-                                          [0, 0, 1],
-                                          [1, 1, 1]], requires_grad: false)
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 1, 1]], requires_grad: false)
 
     # b: [4]
     b = Maurograd::Tensor.new(Numo::SFloat[0.5, 1.0, -1.0, 0.0], requires_grad: false)

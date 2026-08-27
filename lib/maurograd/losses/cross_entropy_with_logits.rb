@@ -1,6 +1,6 @@
-require_relative '../tensor'
-require_relative '../utils/utils'
-require 'numo/narray'
+require_relative "../tensor"
+require_relative "../utils/utils"
+require "numo/narray"
 
 module Maurograd
   module Losses
@@ -34,7 +34,7 @@ module Maurograd
 
         # cached for backward
         @softmax = nil   # [N, C]
-        @target  = nil   # raw target.data
+        @target = nil   # raw target.data
         @is_indices = nil
         @n = nil
         @c = nil
@@ -44,9 +44,8 @@ module Maurograd
         logits, target = @inputs
         x = logits.data
         t = target.data
-        
-        Maurograd::Utils.assert_finite!(x, where: "CEWithLogits forward: logits")
 
+        Maurograd::Utils.assert_finite!(x, where: "CEWithLogits forward: logits")
 
         raise "CrossEntropyWithLogits expects logits [N,C], got #{x.shape.inspect}" unless x.ndim == 2
         @n, @c = x.shape
@@ -67,17 +66,15 @@ module Maurograd
         shift = x.max(axis: 1, keepdims: true)               # [N,1]
         Maurograd::Utils.assert_finite!(shift, where: "CEWithLogits forward: shift")
 
-        exps  = Numo::NMath.exp(x - shift)                   # [N,C]
+        exps = Numo::NMath.exp(x - shift)                   # [N,C]
         Maurograd::Utils.assert_finite!(exps, where: "CEWithLogits forward: exps")
 
         sumexp = exps.sum(axis: 1, keepdims: true)           # [N,1]
         Maurograd::Utils.assert_finite!(sumexp, where: "CEWithLogits forward: sumexp")
 
-
         # softmax cached for backward
         @softmax = exps / sumexp                             # [N,C]
         Maurograd::Utils.assert_finite!(@softmax, where: "CEWithLogits forward: softmax")
-
 
         # log_probs = x - shift - log(sumexp)
         logsumexp = shift + Numo::NMath.log(sumexp)          # [N,1]

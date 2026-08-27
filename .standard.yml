@@ -1,0 +1,34 @@
+# Standard is deliberately close to unconfigurable - see
+# https://github.com/standardrb/standard#configuring-standardrb.
+# These are the exceptions we actually need.
+
+# Match the gemspec's required_ruby_version. Without this, Standard infers
+# the target Ruby from whatever's running it locally, which on a newer Ruby
+# incorrectly flags `require 'set'` in tensor.rb as redundant - Set only
+# became auto-loaded starting in Ruby 3.2, and we still support 3.0/3.1.
+ruby_version: 3.0
+
+ignore:
+  - "test/**/*":
+      # The test suite intentionally uses exact `==` on floats throughout -
+      # expected values are hand-computed from simple, deterministic integer
+      # arithmetic (sums, max-pool selection, etc.), not results that could
+      # drift from floating-point rounding. That's a deliberate testing
+      # convention here, not a bug this cop should flag.
+      - Lint/FloatComparison
+      # sus's expectation DSL uses `be == nil` / `be == value`, where `be`
+      # is a matcher-builder object, not the value under test. Autocorrecting
+      # this to `be.nil?` silently breaks the DSL (it calls `.nil?` on the
+      # builder itself) rather than comparing the tested value - this bit us
+      # for real the first time `standardrb --fix` ran, so it's excluded
+      # everywhere `sus`'s `be` matcher is used.
+      - Style/NilComparison
+  - "ext/**/extconf.rb":
+      # $CFLAGS / $INCFLAGS / $LIBS are mkmf's own documented API for
+      # configuring compilation flags before create_makefile - every Ruby
+      # C-extension's extconf.rb mutates these globals, not a code smell.
+      - Style/GlobalVars
+  - "bench/**/*":
+      # Standalone scripts, not library code - including Maurograd at the
+      # top level to skip the Maurograd:: prefix everywhere is fine here.
+      - Style/MixinUsage

@@ -9,7 +9,7 @@
 #   @ctx_save_for_backward = [a.data, b.data]
 #   # ...
 # end
-require 'numo/linalg'
+require "numo/linalg"
 
 module Maurograd
   module Ops

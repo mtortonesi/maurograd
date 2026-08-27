@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/conv2d'
+require "maurograd/tensor"
+require "maurograd/ops/conv2d"
 
 describe "Conv2D backward without bias" do
   it "does not crash and matches numerical gradient on one input and one weight element" do
@@ -9,7 +9,7 @@ describe "Conv2D backward without bias" do
     x = Maurograd::Tensor.new(Numo::SFloat.new(1, 2, 5, 5).rand - 0.5, requires_grad: true)
     w = Maurograd::Tensor.new(Numo::SFloat.new(3, 2, 3, 3).rand - 0.5, requires_grad: true)
 
-    recompute = -> { (Maurograd::Ops::Conv2D.apply(x, w) ** 2).sum }
+    recompute = -> { (Maurograd::Ops::Conv2D.apply(x, w)**2).sum }
 
     loss = recompute.call
     loss.backward

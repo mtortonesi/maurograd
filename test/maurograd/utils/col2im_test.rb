@@ -1,5 +1,5 @@
-require 'numo/narray'
-require_relative '../../../lib/maurograd/utils/utils'
+require "numo/narray"
+require_relative "../../../lib/maurograd/utils/utils"
 
 describe Maurograd::Utils do
   describe ".col2im" do
@@ -116,4 +116,3 @@ describe Maurograd::Utils do
     end
   end
 end
-

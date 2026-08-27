@@ -1,4 +1,4 @@
-require_relative '../ops/flatten'
+require_relative "../ops/flatten"
 
 module Maurograd
   module Layers
@@ -9,4 +9,3 @@ module Maurograd
     end
   end
 end
-

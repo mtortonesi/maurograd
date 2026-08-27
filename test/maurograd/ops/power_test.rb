@@ -1,5 +1,5 @@
 describe Maurograd::Ops::Power do
-  it 'should correctly compute a simple loss function' do
+  it "should correctly compute a simple loss function" do
     # Assuming the necessary files are loaded
     x = Maurograd::Tensor.new(Numo::SFloat[2, 3], requires_grad: true)
 

@@ -1,4 +1,4 @@
-require 'maurograd/bootstrap'
+require "maurograd/bootstrap"
 
 describe Maurograd::Bootstrap do
   it "parses the target path out of a normal ldconfig -p line" do

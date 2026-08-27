@@ -1,6 +1,6 @@
-require_relative '../tensor'
-require_relative '../ops/linear'
-require_relative '../utils/utils'
+require_relative "../tensor"
+require_relative "../ops/linear"
+require_relative "../utils/utils"
 
 module Maurograd
   module Layers
@@ -29,10 +29,8 @@ module Maurograd
         w = Maurograd::Utils.rand_norm(out_features, in_features, std: std, seed: seed)
         @weights = Maurograd::Tensor.new(w, requires_grad: true)
 
-        if bias
-          @bias = Maurograd::Tensor.new(Numo::SFloat.zeros(out_features), requires_grad: true)
-        else
-          @bias = nil
+        @bias = if bias
+          Maurograd::Tensor.new(Numo::SFloat.zeros(out_features), requires_grad: true)
         end
       end
 
@@ -45,6 +43,6 @@ module Maurograd
         ps << @bias if @bias
         ps
       end
-    end 
+    end
   end
 end

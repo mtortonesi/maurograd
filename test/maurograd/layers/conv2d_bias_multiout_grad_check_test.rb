@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/layers/conv2d'
+require "maurograd/tensor"
+require "maurograd/layers/conv2d"
 
 describe "Conv2D Bias Gradient Check (multi out_channels)" do
   it "matches numerical gradient for one bias element when out_channels > 1" do
@@ -61,4 +61,3 @@ describe "Conv2D Bias Gradient Check (multi out_channels)" do
     expect(diff).to be < tolerance
   end
 end
-

@@ -1,4 +1,4 @@
-require_relative '../utils/utils'
+require_relative "../utils/utils"
 
 module Maurograd
   module Ops
@@ -49,4 +49,3 @@ module Maurograd
     end
   end
 end
-

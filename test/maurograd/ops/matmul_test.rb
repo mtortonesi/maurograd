@@ -1,6 +1,6 @@
-describe 'MatMul operation' do
+describe "MatMul operation" do
   # Test 1: standard multiplication between 2D matrices.
-  describe 'standard 2D multiplication' do
+  describe "standard 2D multiplication" do
     # Matrix A: [2, 3]
     let(:a_data) { Numo::SFloat[[1, 2, 3], [4, 5, 6]] }
     # Matrix B: [3, 2]
@@ -10,13 +10,13 @@ describe 'MatMul operation' do
     let(:b) { Maurograd::Tensor.new(b_data, requires_grad: true) }
     let(:c) { a.matmul(b) }
 
-    it 'correctly computes the forward pass (C = A . B)' do
+    it "correctly computes the forward pass (C = A . B)" do
       # Expected result: [ [1*7+2*9+3*11, 1*8+2*10+3*12], [4*7+5*9+6*11, 4*8+5*10+6*12] ]
       expected = Numo::SFloat[[58, 64], [139, 154]]
       expect(c.data).to be == expected
     end
 
-    it 'correctly computes the gradients (backward pass)' do
+    it "correctly computes the gradients (backward pass)" do
       # Use an output gradient of all 1s for simplicity.
       grad_output = Numo::SFloat[[1, 1], [1, 1]]
       c.backward(grad_output)

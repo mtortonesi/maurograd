@@ -1,11 +1,11 @@
-require 'maurograd/tensor'
-require 'maurograd/losses/cross_entropy_with_logits'
+require "maurograd/tensor"
+require "maurograd/losses/cross_entropy_with_logits"
 
 describe Maurograd::Losses::CrossEntropyWithLogits do
   it "computes a finite scalar loss and produces grad with correct shape (indices target)" do
     x = Maurograd::Tensor.new(
       Numo::SFloat[[2.0, 1.0, 0.1],
-                   [0.5, 0.2, -1.0]],
+        [0.5, 0.2, -1.0]],
       requires_grad: true
     )
 
@@ -21,13 +21,13 @@ describe Maurograd::Losses::CrossEntropyWithLogits do
   it "supports one-hot targets [N,C]" do
     x = Maurograd::Tensor.new(
       Numo::SFloat[[1.0, 2.0],
-                   [3.0, 0.0]],
+        [3.0, 0.0]],
       requires_grad: true
     )
 
     y = Maurograd::Tensor.new(
       Numo::SFloat[[0.0, 1.0],
-                   [1.0, 0.0]],
+        [1.0, 0.0]],
       requires_grad: false
     )
 
@@ -41,7 +41,7 @@ describe Maurograd::Losses::CrossEntropyWithLogits do
   it "raises when indices target length doesn't match logits N" do
     x = Maurograd::Tensor.new(
       Numo::SFloat[[2.0, 1.0, 0.1],
-                   [0.5, 0.2, -1.0]],
+        [0.5, 0.2, -1.0]],
       requires_grad: true
     )
 
@@ -53,7 +53,7 @@ describe Maurograd::Losses::CrossEntropyWithLogits do
   it "raises when one-hot target shape doesn't match logits [N,C]" do
     x = Maurograd::Tensor.new(
       Numo::SFloat[[1.0, 2.0],
-                   [3.0, 0.0]],
+        [3.0, 0.0]],
       requires_grad: true
     )
 
@@ -63,6 +63,6 @@ describe Maurograd::Losses::CrossEntropyWithLogits do
   end
 
   def finite_scalar?(x)
-    x = x.to_f if x.respond_to?(:to_f)
+    x.to_f if x.respond_to?(:to_f)
   end
 end

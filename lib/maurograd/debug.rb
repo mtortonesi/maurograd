@@ -5,7 +5,7 @@ module Maurograd
   #
   # Enable with `Maurograd.debug = true`, or by setting MAUROGRAD_DEBUG=1
   # in the environment before requiring maurograd.
-  @debug = ENV['MAUROGRAD_DEBUG'] == '1'
+  @debug = ENV["MAUROGRAD_DEBUG"] == "1"
 
   class << self
     attr_accessor :debug

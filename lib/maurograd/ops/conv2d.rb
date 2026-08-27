@@ -1,5 +1,5 @@
-require_relative '../tensor'
-require_relative '../utils/utils'
+require_relative "../tensor"
+require_relative "../utils/utils"
 
 module Maurograd
   module Ops
@@ -54,14 +54,11 @@ module Maurograd
     #   and finally col2im(dX_col) -> dX: [N, C_in, H, W]
     #
     class Conv2D
-
       def self.apply(input, weight, bias = nil, stride = 1, padding = 0)
         new(input, weight, bias, stride, padding).forward
       end
 
-     
       attr_reader :inputs, :stride, :padding
-
 
       def initialize(input, weight, bias = nil, stride = 1, padding = 0)
         # Store only non-nil inputs so that graph traversal is easy.
@@ -73,29 +70,28 @@ module Maurograd
         @workspace = {}
       end
 
-
       def forward
         input, weight, bias = @inputs
 
         x_data = if input.data.contiguous?
-                   input.data
-                 else
-                   input.data.copy
-                 end
+          input.data
+        else
+          input.data.copy
+        end
 
         w_data = if weight.data.contiguous?
-                   weight.data
-                 else
-                   weight.data.copy
-                 end
+          weight.data
+        else
+          weight.data.copy
+        end
 
         b_data = if bias.nil?
-                   nil
-                 elsif bias.data.contiguous?
-                   bias.data
-                 else
-                   bias.data.copy
-                 end
+          nil
+        elsif bias.data.contiguous?
+          bias.data
+        else
+          bias.data.copy
+        end
 
         out_data = Maurograd::Ext.conv2d_forward(x_data, w_data, b_data, @stride, @padding, @workspace)
 
@@ -110,25 +106,22 @@ module Maurograd
         out
       end
 
-
       def backward(grad_output)
         input, weight, bias = @inputs
 
         go = grad_output.is_a?(Maurograd::Tensor) ? grad_output.data : grad_output
 
         x_data = if input.data.contiguous?
-                   input.data
-                 else
-                   input.data.copy
-                 end
+          input.data
+        else
+          input.data.copy
+        end
 
         w_data = if weight.data.contiguous?
-                   weight.data
-                 else
-                   weight.data.copy
-                 end
-
-
+          weight.data
+        else
+          weight.data.copy
+        end
 
         unless go.contiguous?
           go = go.copy
@@ -136,7 +129,7 @@ module Maurograd
 
         want_dx = input.requires_grad ? 1 : 0
         want_dw = weight.requires_grad ? 1 : 0
-        want_db = (bias && bias.requires_grad) ? 1 : 0
+        want_db = bias&.requires_grad ? 1 : 0
 
         dx, dw, db = Maurograd::Ext.conv2d_backward(
           x_data, w_data, go,
@@ -145,7 +138,7 @@ module Maurograd
           @workspace
         )
 
-        if bias && bias.grad && bias.grad.shape != db.shape
+        if bias&.grad && bias.grad.shape != db.shape
           raise "db shape mismatch: grad=#{bias.grad.shape} db=#{db.shape}"
         end
 
@@ -169,8 +162,6 @@ module Maurograd
           input.accumulate_grad(dx)
         end
       end
-
     end
   end
 end
-

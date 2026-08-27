@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/layers/conv2d'
+require "maurograd/tensor"
+require "maurograd/layers/conv2d"
 
 describe "Conv2D Input Gradient Check" do
   it "matches numerical gradient for one input element" do
@@ -48,4 +48,3 @@ describe "Conv2D Input Gradient Check" do
     expect(diff).to be < tolerance
   end
 end
-

@@ -1,4 +1,4 @@
-require 'maurograd/utils/utils'
+require "maurograd/utils/utils"
 
 describe "Maurograd::Utils.rand_norm" do
   it "produces identical arrays for the same seed" do
@@ -21,7 +21,7 @@ describe "Maurograd::Utils.rand_norm" do
   it "approximates the requested mean and standard deviation" do
     a = Maurograd::Utils.rand_norm(200_000, mean: 3.0, std: 2.0, seed: 7)
     mean = a.mean
-    variance = ((a - mean) ** 2).mean
+    variance = ((a - mean)**2).mean
     expect((mean - 3.0).abs).to be < 0.05
     expect((Math.sqrt(variance) - 2.0).abs).to be < 0.05
   end

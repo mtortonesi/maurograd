@@ -1,5 +1,5 @@
-require_relative '../tensor'
-require_relative '../utils/utils'
+require_relative "../tensor"
+require_relative "../utils/utils"
 
 module Maurograd
   module Ops
@@ -85,21 +85,21 @@ module Maurograd
         # dy: [N, Out]
 
         # A) Bias gradient: db = sum over batch axis -> [Out]
-        if bias && bias.requires_grad
+        if bias&.requires_grad
           db = dy.sum(axis: 0) # [Out]
           bias.accumulate_grad(db.copy.reshape(*bias.shape))
         end
 
-        # B) Weight gradient: dW = dy^T @ X  -> [Out, In]
+        # B) Weight gradient: dw = dy^T @ X  -> [Out, In]
         if weight.requires_grad
-          dW = dy.transpose(1, 0).dot(@x) # [Out, In]
-          weight.accumulate_grad(dW)
+          dw = dy.transpose(1, 0).dot(@x) # [Out, In]
+          weight.accumulate_grad(dw)
         end
 
-        # C) Input gradient: dX = dy @ W -> [N, In]
+        # C) Input gradient: dx = dy @ W -> [N, In]
         if input.requires_grad
-          dX = dy.dot(@w) # [N, In]
-          input.accumulate_grad(dX)
+          dx = dy.dot(@w) # [N, In]
+          input.accumulate_grad(dx)
         end
       end
     end

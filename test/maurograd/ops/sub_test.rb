@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/sub'
+require "maurograd/tensor"
+require "maurograd/ops/sub"
 
 describe Maurograd::Ops::Sub do
   it "computes forward subtraction" do
@@ -25,12 +25,12 @@ describe Maurograd::Ops::Sub do
 
   it "handles broadcasting in backward (matrix - row-bias style)" do
     a = Maurograd::Tensor.new(Numo::SFloat[[1, 2, 3],
-                                           [4, 5, 6]], requires_grad: true)
+      [4, 5, 6]], requires_grad: true)
     b = Maurograd::Tensor.new(Numo::SFloat[[10, 20, 30]], requires_grad: true)
 
     c = Maurograd::Ops::Sub.apply(a, b)
     expect(c.data).to be == Numo::SFloat[[-9, -18, -27],
-                                         [-6, -15, -24]]
+      [-6, -15, -24]]
 
     go = Numo::SFloat.ones(2, 3)
     c.backward(go)
@@ -43,4 +43,3 @@ describe Maurograd::Ops::Sub do
     expect(b.grad).to be == Numo::SFloat[[-2, -2, -2]]
   end
 end
-

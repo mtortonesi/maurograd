@@ -1,5 +1,5 @@
-require 'maurograd/layers/conv2d'
-require 'maurograd/layers/linear'
+require "maurograd/layers/conv2d"
+require "maurograd/layers/linear"
 
 describe "Deterministic weight initialization via seed:" do
   it "gives Conv2D identical weights for the same seed" do

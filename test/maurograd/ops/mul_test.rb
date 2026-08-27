@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/mul'
+require "maurograd/tensor"
+require "maurograd/ops/mul"
 
 describe Maurograd::Ops::Mul do
   it "computes forward elementwise multiplication" do
@@ -26,13 +26,13 @@ describe Maurograd::Ops::Mul do
   it "handles broadcasting in backward (vector * row-bias style)" do
     # a: [2,3], b: [1,3] -> broadcast b over axis 0
     a = Maurograd::Tensor.new(Numo::SFloat[[1, 2, 3],
-                                           [4, 5, 6]], requires_grad: true)
+      [4, 5, 6]], requires_grad: true)
     b = Maurograd::Tensor.new(Numo::SFloat[[10, 20, 30]], requires_grad: true)
 
     c = Maurograd::Ops::Mul.apply(a, b)
     expect(c.shape).to be == [2, 3]
     expect(c.data).to be == Numo::SFloat[[10, 40, 90],
-                                         [40, 100, 180]]
+      [40, 100, 180]]
 
     # upstream gradient all ones
     go = Numo::SFloat.ones(2, 3)
@@ -40,7 +40,7 @@ describe Maurograd::Ops::Mul do
 
     # grad_a = go * b (broadcast) => rows equal to b
     expect(a.grad).to be == Numo::SFloat[[10, 20, 30],
-                                         [10, 20, 30]]
+      [10, 20, 30]]
 
     # grad_b = sum over batch of (go * a) along axis 0, keepdims -> [1,3]
     # => [1+4, 2+5, 3+6] = [5,7,9]
@@ -48,4 +48,3 @@ describe Maurograd::Ops::Mul do
     expect(b.grad).to be == Numo::SFloat[[5, 7, 9]]
   end
 end
-

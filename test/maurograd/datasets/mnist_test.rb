@@ -1,8 +1,8 @@
-require 'tmpdir'
-require 'fileutils'
-require 'numo/narray'
+require "tmpdir"
+require "fileutils"
+require "numo/narray"
 
-require 'maurograd/datasets/mnist'
+require "maurograd/datasets/mnist"
 
 describe Maurograd::Datasets::MNIST do
   def idx_images_bytes(n, rows, cols)
@@ -75,4 +75,3 @@ describe Maurograd::Datasets::MNIST do
     end
   end
 end
-

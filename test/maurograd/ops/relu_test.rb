@@ -1,6 +1,6 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/relu'
-require 'maurograd/ops/sum'
+require "maurograd/tensor"
+require "maurograd/ops/relu"
+require "maurograd/ops/sum"
 
 describe Maurograd::Ops::ReLU do
   it "zeros out negatives and backprop passes gradient only where x>0" do
@@ -16,4 +16,3 @@ describe Maurograd::Ops::ReLU do
     expect(x.grad).to be == Numo::SFloat[0.0, 0.0, 1.0]
   end
 end
-

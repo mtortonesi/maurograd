@@ -1,5 +1,5 @@
 describe Maurograd::Utils do
-  describe '.im2col' do
+  describe ".im2col" do
     let(:input) do
       # Create a 1x1x3x3 image: [N=1, C=1, H=3, W=3]
       Numo::SFloat[[[
@@ -9,14 +9,13 @@ describe Maurograd::Utils do
       ]]]
     end
 
-
     # Given the input image and a 2x2 filter, the extracted windows should be:
     # - top-left: [[1, 2], [4, 5]]
     # - top-right: [[2, 3], [5, 6]]
     # - bottom-left: [[4, 5], [7, 8]]
     # - bottom-right: [[5, 6], [8, 9]]
     # im2col should flatten these windows into the rows of a matrix.
-    it 'correctly turns a small image into columns' do
+    it "correctly turns a small image into columns" do
       # Parameters: filter_h=2, filter_w=2, stride=1, padding=0
       res = Maurograd::Utils.im2col(input, 2, 2, 1, 0)
 
@@ -32,7 +31,7 @@ describe Maurograd::Utils do
       expect(res[3, true]).to be == Numo::SFloat[5, 6, 8, 9]
     end
 
-    it 'correctly handles the stride' do
+    it "correctly handles the stride" do
       # With stride 2, on a 3x3 image with a 2x2 filter, only the first window remains.
       res = Maurograd::Utils.im2col(input, 2, 2, 2, 0)
 
@@ -41,7 +40,7 @@ describe Maurograd::Utils do
     end
   end
 
-  describe '.col2im' do
+  describe ".col2im" do
     it "correctly reconstructs overlapping regions" do
       shape = [1, 1, 3, 3]
       input = Numo::SFloat.ones(*shape)
@@ -55,8 +54,8 @@ describe Maurograd::Utils do
       # The center pixel [1,1] is covered by 4 overlapping 2x2 windows.
       # The corners are covered by a single window.
       expected = Numo::SFloat[[[[1, 2, 1],
-                                [2, 4, 2],
-                                [1, 2, 1]]]]
+        [2, 4, 2],
+        [1, 2, 1]]]]
 
       expect(res).to be == expected
     end

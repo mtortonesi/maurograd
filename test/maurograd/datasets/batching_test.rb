@@ -1,5 +1,5 @@
-require 'numo/narray'
-require 'maurograd/datasets/batching'
+require "numo/narray"
+require "maurograd/datasets/batching"
 
 describe Maurograd::Datasets::Batching do
   it "yields mini-batches with correct shapes (no shuffle)" do

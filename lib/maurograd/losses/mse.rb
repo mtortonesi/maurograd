@@ -1,4 +1,4 @@
-require_relative '../tensor'
+require_relative "../tensor"
 
 module Maurograd
   module Losses
@@ -41,7 +41,7 @@ module Maurograd
 
         # Mean squared error (scalar).
         @n_elems = @diff.size
-        loss_data = (@diff ** 2).sum / @n_elems.to_f
+        loss_data = (@diff**2).sum / @n_elems.to_f
 
         requires_grad = pred.requires_grad || target.requires_grad
         out = Tensor.new(loss_data, requires_grad: requires_grad)
@@ -72,4 +72,3 @@ module Maurograd
     end
   end
 end
-

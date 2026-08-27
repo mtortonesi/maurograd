@@ -1,18 +1,17 @@
 # frozen_string_literal: true
 
-require 'maurograd/tensor'
-require 'maurograd/layers/conv2d'
-
+require "maurograd/tensor"
+require "maurograd/layers/conv2d"
 
 describe Maurograd::Ops::Conv2D do
   it "matches numerical gradient for one bias element (tiny conv)" do
     srand 1234
 
     # Tiny shapes: N=2, C=3, H=W=5, Cout=4, Kh=Kw=3
-    n  = 2
-    c  = 3
-    h  = 5
-    w  = 5
+    n = 2
+    c = 3
+    h = 5
+    w = 5
     cout = 4
     kh = 3
     kw = 3
@@ -41,7 +40,7 @@ describe Maurograd::Ops::Conv2D do
     # Numerical gradient
     b_plus = b.dup
     b_minus = b.dup
-    b_plus[co]  += eps
+    b_plus[co] += eps
     b_minus[co] -= eps
 
     out_plus = Maurograd::Ops::Conv2D.apply(
@@ -68,4 +67,3 @@ describe Maurograd::Ops::Conv2D do
     assert err < 1e-2, "bias grad mismatch: aut=#{g_aut} num=#{g_num} err=#{err}"
   end
 end
-

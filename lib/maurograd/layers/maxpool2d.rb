@@ -1,4 +1,4 @@
-require_relative '../ops/maxpool2d'
+require_relative "../ops/maxpool2d"
 
 module Maurograd
   module Layers
@@ -15,4 +15,3 @@ module Maurograd
     end
   end
 end
-

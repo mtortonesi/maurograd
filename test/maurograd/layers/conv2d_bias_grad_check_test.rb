@@ -1,6 +1,6 @@
 # test/maurograd/layers/conv2d_bias_grad_check.rb
-require 'maurograd/tensor'
-require 'maurograd/layers/conv2d'
+require "maurograd/tensor"
+require "maurograd/layers/conv2d"
 
 describe "Conv2D Bias Gradient Check" do
   it "matches numerical gradient for one bias element" do
@@ -47,4 +47,3 @@ describe "Conv2D Bias Gradient Check" do
     expect(diff).to be < tolerance
   end
 end
-

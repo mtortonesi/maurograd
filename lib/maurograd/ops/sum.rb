@@ -30,7 +30,6 @@ module Maurograd
         tensor = @inputs.first
         return unless tensor.requires_grad
 
-
         # If y = sum(x), then dy/dx_i = 1 for every i.
         # The total gradient is grad_output * 1, broadcast to tensor's shape.
         #

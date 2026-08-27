@@ -1,18 +1,17 @@
-require 'numo/narray'
-require 'set'
+require "numo/narray"
+require "set"
 
-require_relative 'ops/add'
-require_relative 'ops/sub'
-require_relative 'ops/mul'
-require_relative 'ops/matmul'
-require_relative 'ops/power'
-require_relative 'ops/sum'
-require_relative 'ops/conv2d'
-require_relative 'ops/linear'
-require_relative 'ops/flatten'
-require_relative 'ops/relu'
-require_relative 'ops/maxpool2d'
-
+require_relative "ops/add"
+require_relative "ops/sub"
+require_relative "ops/mul"
+require_relative "ops/matmul"
+require_relative "ops/power"
+require_relative "ops/sum"
+require_relative "ops/conv2d"
+require_relative "ops/linear"
+require_relative "ops/flatten"
+require_relative "ops/relu"
+require_relative "ops/maxpool2d"
 
 module Maurograd
   # Tensor is the core data structure of Maurograd.
@@ -65,9 +64,17 @@ module Maurograd
     end
 
     # Convenience accessors.
-    def shape; @data.shape; end
-    def ndim;  @data.ndim;  end
-    def size;  @data.size;  end
+    def shape
+      @data.shape
+    end
+
+    def ndim
+      @data.ndim
+    end
+
+    def size
+      @data.size
+    end
 
     # Start backpropagation from this tensor.
     #
@@ -101,7 +108,6 @@ module Maurograd
     #   If omitted, this tensor must be a scalar (loss), and gradient defaults to 1.
     #
     def backward(gradient = nil)
-
       # If this tensor does not require gradients, we stop immediately.
       return unless @requires_grad
 
@@ -153,7 +159,7 @@ module Maurograd
       # Each tensor calls backward on its creator Op exactly once,
       # using the gradient accumulated in tensor.grad.
       topo.reverse_each do |t|
-        t.creator.backward(t.grad) if t.creator
+        t.creator&.backward(t.grad)
       end
     end
 
@@ -200,8 +206,8 @@ module Maurograd
       Ops::Conv2D.apply(self, other)
     end
 
-    def **(exponent)
-      Ops::Power.apply(self, exponent)
+    def **(other)
+      Ops::Power.apply(self, other)
     end
 
     def sum
@@ -220,7 +226,7 @@ module Maurograd
 
     def linear(weight, bias = nil)
       weight = Tensor.new(weight) unless weight.is_a?(Tensor)
-      bias   = Tensor.new(bias)   if bias && !bias.is_a?(Tensor)
+      bias = Tensor.new(bias) if bias && !bias.is_a?(Tensor)
       Ops::Linear.apply(self, weight, bias)
     end
 

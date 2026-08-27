@@ -1,6 +1,6 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/flatten'
-require 'maurograd/ops/sum'
+require "maurograd/tensor"
+require "maurograd/ops/flatten"
+require "maurograd/ops/sum"
 
 describe Maurograd::Ops::Flatten do
   it "flattens [N, ...] to [N, D] and backprop reshapes gradients correctly" do
@@ -16,4 +16,3 @@ describe Maurograd::Ops::Flatten do
     expect(x.grad).to be == Numo::SFloat.ones(2, 3, 4)
   end
 end
-

@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/ops/maxpool2d'
+require "maurograd/tensor"
+require "maurograd/ops/maxpool2d"
 
 describe Maurograd::Ops::MaxPool2D do
   it "supports padding in forward (zeros are included in border windows)" do
@@ -8,7 +8,7 @@ describe Maurograd::Ops::MaxPool2D do
     # 3 4
     x = Maurograd::Tensor.new(
       Numo::SFloat[[[[1, 2],
-                     [3, 4]]]],
+        [3, 4]]]],
       requires_grad: false
     )
 
@@ -27,7 +27,6 @@ describe Maurograd::Ops::MaxPool2D do
 
     expect(y.shape).to be == [1, 1, 2, 2]
     expect(y.data).to be == Numo::SFloat[[[[1, 2],
-                                           [3, 4]]]]
+      [3, 4]]]]
   end
 end
-

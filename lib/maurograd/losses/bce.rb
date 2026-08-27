@@ -1,4 +1,4 @@
-require_relative '../tensor'
+require_relative "../tensor"
 
 module Maurograd
   module Losses
@@ -88,4 +88,3 @@ module Maurograd
     end
   end
 end
-

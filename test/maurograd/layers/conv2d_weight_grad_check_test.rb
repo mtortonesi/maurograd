@@ -1,5 +1,5 @@
-require 'maurograd/tensor'
-require 'maurograd/layers/conv2d'
+require "maurograd/tensor"
+require "maurograd/layers/conv2d"
 
 describe "Conv2D Gradient Check" do
   it "has an analytic gradient that matches the numerical one" do

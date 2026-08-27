@@ -1,4 +1,4 @@
-require_relative '../ops/relu'
+require_relative "../ops/relu"
 
 module Maurograd
   module Layers
@@ -9,4 +9,3 @@ module Maurograd
     end
   end
 end
-

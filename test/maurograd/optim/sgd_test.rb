@@ -1,13 +1,13 @@
 # test/maurograd/optim/sgd_test.rb
-require 'maurograd/tensor'
-require 'maurograd/optim/sgd'
+require "maurograd/tensor"
+require "maurograd/optim/sgd"
 
 describe Maurograd::Optim::SGD do
   it "updates parameters using gradients and can zero them" do
     w = Maurograd::Tensor.new(Numo::SFloat[2.0], requires_grad: true)
 
     # loss = sum(w^2) => grad = 2w = 4
-    loss = (w ** 2).sum
+    loss = (w**2).sum
     loss.backward
 
     expect(w.grad).to be == Numo::SFloat[4.0]
@@ -32,4 +32,3 @@ describe Maurograd::Optim::SGD do
     expect(w.data).to be == Numo::SFloat[2.0]
   end
 end
-

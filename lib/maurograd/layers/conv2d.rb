@@ -1,6 +1,6 @@
-require_relative '../tensor'
-require_relative '../ops/conv2d'
-require_relative '../utils/utils'
+require_relative "../tensor"
+require_relative "../ops/conv2d"
+require_relative "../utils/utils"
 
 module Maurograd
   module Layers
@@ -127,4 +127,3 @@ module Maurograd
     end
   end
 end
-

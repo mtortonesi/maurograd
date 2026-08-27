@@ -2,7 +2,7 @@ describe Maurograd::Tensor do
   let(:data) { Numo::SFloat.new(2, 2).seq }
   let(:tensor) { Maurograd::Tensor.new(data) }
 
-  it 'has the correct shape' do
+  it "has the correct shape" do
     expect(tensor.shape).to be == [2, 2]
   end
 
@@ -42,16 +42,16 @@ describe Maurograd::Tensor do
   end
 
   # Simple addition test (no broadcasting).
-  describe 'simple addition operation' do
+  describe "simple addition operation" do
     let(:a) { Maurograd::Tensor.new(Numo::SFloat[1, 2, 3], requires_grad: true) }
     let(:b) { Maurograd::Tensor.new(Numo::SFloat[4, 5, 6], requires_grad: true) }
     let(:c) { a + b }
 
-    it 'correctly computes the forward pass' do
+    it "correctly computes the forward pass" do
       expect(c.data).to be == Numo::SFloat[5, 7, 9]
     end
 
-    it 'correctly accumulates gradients when a tensor is used more than once' do
+    it "correctly accumulates gradients when a tensor is used more than once" do
       a = Maurograd::Tensor.new(Numo::SFloat[2, 3], requires_grad: true)
       # Operation: b = a + a
       b = a + a
@@ -62,7 +62,7 @@ describe Maurograd::Tensor do
       expect(a.grad).to be == Numo::SFloat[2, 2]
     end
 
-    it 'correctly computes the gradients in the backward pass' do
+    it "correctly computes the gradients in the backward pass" do
       c.backward(Numo::SFloat[1, 1, 1])
 
       expect(a.grad).to be == Numo::SFloat[1, 1, 1]
@@ -71,7 +71,7 @@ describe Maurograd::Tensor do
   end
 
   # Broadcasting test (essential for CNN biases).
-  describe 'gradient broadcasting' do
+  describe "gradient broadcasting" do
     # Imagine a mini-batch of 2 samples, with 3 channels (e.g. 2x3).
     let(:data) { Numo::SFloat[[1, 2, 3], [4, 5, 6]] }
     let(:bias_data) { Numo::SFloat[[10, 20, 30]] } # Shape [1, 3]
@@ -80,12 +80,12 @@ describe Maurograd::Tensor do
     let(:b) { Maurograd::Tensor.new(bias_data, requires_grad: true) }
     let(:c) { a + b }
 
-    it 'correctly broadcasts in the forward pass' do
+    it "correctly broadcasts in the forward pass" do
       expected = Numo::SFloat[[11, 22, 33], [14, 25, 36]]
       expect(c.data).to be == expected
     end
 
-    it 'correctly reduces the gradient for the broadcasted tensor' do
+    it "correctly reduces the gradient for the broadcasted tensor" do
       # Output gradient (same shape as c: 2x3).
       grad_output = Numo::SFloat[[1, 1, 1], [1, 1, 1]]
       c.backward(grad_output)

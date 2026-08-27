@@ -1,6 +1,6 @@
-require_relative '../ext'
-require_relative '../debug'
-require_relative '../seed'
+require_relative "../ext"
+require_relative "../debug"
+require_relative "../seed"
 
 module Maurograd
   module Utils
@@ -61,7 +61,6 @@ module Maurograd
       res
     end
 
-
     # Zero-pad an NCHW tensor: [N, C, H, W] -> [N, C, H+2P, W+2P]
     #
     # Why do we need this helper?
@@ -93,16 +92,13 @@ module Maurograd
       out
     end
 
-
     def self.im2col(*args)
       Maurograd::Ext.im2col(*args)
     end
 
-
     def self.col2im(*args)
       Maurograd::Ext.col2im(*args)
     end
-
 
     # 2D transpose helper.
     # In Numo, transpose(*axes) is a general axis permutation.
@@ -121,11 +117,11 @@ module Maurograd
       # Numo does not provide isfinite? universally, so we use two checks:
       flat = na.flatten
       # NaN check: NaN != NaN is true in IEEE 754.
-      if (flat.ne(flat).any?)
+      if flat.ne(flat).any?
         raise "Non-finite detected (NaN) at #{where}"
       end
       # Inf check: treat values with abs > 1e30 as effectively infinite.
-      if (flat.abs.gt(1e30).any?)
+      if flat.abs.gt(1e30).any?
         raise "Non-finite detected (Inf/huge) at #{where}"
       end
     end
@@ -182,6 +178,5 @@ module Maurograd
 
       total_norm
     end
-
   end
 end

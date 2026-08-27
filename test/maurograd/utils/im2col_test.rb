@@ -1,7 +1,7 @@
 # test/maurograd/utils/im2col_test.rb
 
-require 'numo/narray'
-require_relative '../../../lib/maurograd/utils/utils'
+require "numo/narray"
+require_relative "../../../lib/maurograd/utils/utils"
 
 describe Maurograd::Utils do
   describe ".im2col" do
@@ -14,9 +14,9 @@ describe Maurograd::Utils do
         #  9 10 11 12
         # 13 14 15 16
         x = Numo::SFloat[[[
-          [ 1,  2,  3,  4],
-          [ 5,  6,  7,  8],
-          [ 9, 10, 11, 12],
+          [1, 2, 3, 4],
+          [5, 6, 7, 8],
+          [9, 10, 11, 12],
           [13, 14, 15, 16]
         ]]]
 
@@ -39,9 +39,9 @@ describe Maurograd::Utils do
         # (oh=1, ow=0) -> [[9,10],[13,14]] => [9,10,13,14]
         # (oh=1, ow=1) -> [[11,12],[15,16]] => [11,12,15,16]
         expected = Numo::SFloat[
-          [ 1,  2,  5,  6],
-          [ 3,  4,  7,  8],
-          [ 9, 10, 13, 14],
+          [1, 2, 5, 6],
+          [3, 4, 7, 8],
+          [9, 10, 13, 14],
           [11, 12, 15, 16]
         ]
 
@@ -132,4 +132,3 @@ describe Maurograd::Utils do
     end
   end
 end
-

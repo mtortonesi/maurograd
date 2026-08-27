@@ -1,4 +1,4 @@
-require_relative '../tensor'
+require_relative "../tensor"
 
 module Maurograd
   module Ops
@@ -43,4 +43,3 @@ module Maurograd
     end
   end
 end
-

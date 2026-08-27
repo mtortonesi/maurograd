@@ -28,10 +28,9 @@ rescue LoadError
 end
 
 # Sanity check (optional but helps catch partial loads early)
-unless defined?(Maurograd::Ext) && 
-    Maurograd::Ext.respond_to?(:conv2d_forward) && 
-    Maurograd::Ext.respond_to?(:im2col) && 
+unless defined?(Maurograd::Ext) &&
+    Maurograd::Ext.respond_to?(:conv2d_forward) &&
+    Maurograd::Ext.respond_to?(:im2col) &&
     Maurograd::Ext.respond_to?(:col2im)
-  raise LoadError, 'maurograd_ext loaded but key methods not defined'
+  raise LoadError, "maurograd_ext loaded but key methods not defined"
 end
-
