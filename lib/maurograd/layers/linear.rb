@@ -14,7 +14,10 @@ module Maurograd
     class Linear
       attr_accessor :weights, :bias
 
-      # - seed: optional seed for reproducible weight initialization
+      # - seed: optional seed for reproducible weight initialization.
+      #         Without it, weight init draws from Numo's global RNG, which
+      #         Maurograd.seed!(n) can seed for a whole run at once instead
+      #         of passing seed: to every layer.
       def initialize(in_features, out_features, bias: true, seed: nil)
         # He initialization is usually associated with ReLU.
         # For a generic Linear layer, Xavier (Glorot) is also common.

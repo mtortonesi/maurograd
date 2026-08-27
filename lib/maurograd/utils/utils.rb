@@ -1,5 +1,6 @@
 require_relative '../ext'
 require_relative '../debug'
+require_relative '../seed'
 
 module Maurograd
   module Utils

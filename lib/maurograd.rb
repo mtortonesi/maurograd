@@ -21,6 +21,10 @@ module Maurograd
   # Maurograd.debug flag, off by default (used by Utils.assert_finite!).
   require_relative 'maurograd/debug'
 
+  # Maurograd.seed! for reproducible runs (also re-randomizes Numo's global
+  # RNG at load time, so unseeded weight init is genuinely random).
+  require_relative 'maurograd/seed'
+
   # Core tensor type (autograd graph node).
   require_relative 'maurograd/tensor'
 

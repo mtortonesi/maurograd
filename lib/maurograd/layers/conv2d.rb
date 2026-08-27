@@ -37,7 +37,10 @@ module Maurograd
       # - kernel_size:  integer (e.g. 3) or [kh, kw]
       # - stride:       convolution stride (default: 1)
       # - padding:      zero-padding applied to H and W (default: 0)
-      # - seed:         optional seed for reproducible weight initialization
+      # - seed:         optional seed for reproducible weight initialization.
+      #                 Without it, weight init draws from Numo's global RNG,
+      #                 which Maurograd.seed!(n) can seed for a whole run at
+      #                 once instead of passing seed: to every layer.
       #
       # Weight tensor shape:
       #   [C_out, C_in, KH, KW]
