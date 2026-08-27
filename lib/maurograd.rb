@@ -15,6 +15,9 @@ module Maurograd
   # Version first (so clients can check Maurograd::VERSION early).
   require_relative 'maurograd/version'
 
+  # Maurograd.debug flag, off by default (used by Utils.assert_finite!).
+  require_relative 'maurograd/debug'
+
   # Core tensor type (autograd graph node).
   require_relative 'maurograd/tensor'
 

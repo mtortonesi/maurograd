@@ -1,4 +1,5 @@
 require_relative '../ext'
+require_relative '../debug'
 
 module Maurograd
   module Utils
@@ -110,6 +111,11 @@ module Maurograd
     end
 
     def self.assert_finite!(na, where:)
+      # Off by default (see Maurograd.debug): this walks the entire array,
+      # which is pure overhead on every forward/backward call once a model
+      # is known to be numerically stable.
+      return unless Maurograd.debug
+
       # na is a Numo::NArray.
       # Numo does not provide isfinite? universally, so we use two checks:
       flat = na.flatten
