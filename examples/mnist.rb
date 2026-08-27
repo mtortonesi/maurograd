@@ -8,7 +8,7 @@ epochs = 5
 batch_size = 64
 seed = 1
 
-# Scarica (idempotente) e carica
+# Download (idempotent) and load.
 Maurograd::Datasets::MNIST.download(root: root)
 x_train, y_train = Maurograd::Datasets::MNIST.load(root: root, split: :train, normalize: true)
 x_test,  y_test  = Maurograd::Datasets::MNIST.load(root: root, split: :test,  normalize: true)
@@ -39,7 +39,7 @@ def train_epoch(model, x, y, optimizer, batch_size:, seed:, epoch:)
     x, y,
     batch_size: batch_size,
     shuffle: true,
-    seed: seed # seed + epoch  # per variare il seed ad ogni epoca
+    seed: seed # seed + epoch  # to vary the seed on every epoch
   )
 
   i = 0

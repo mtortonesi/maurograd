@@ -1,6 +1,6 @@
 describe Maurograd::Ops::Power do
   it 'should correctly compute a simple loss function' do
-    # Supponendo di avere i file caricati
+    # Assuming the necessary files are loaded
     x = Maurograd::Tensor.new(Numo::SFloat[2, 3], requires_grad: true)
 
     # Forward pass: L = sum(x^2)

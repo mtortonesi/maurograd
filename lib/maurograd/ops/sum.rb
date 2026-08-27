@@ -8,15 +8,15 @@ module Maurograd
       attr_reader :inputs
 
       def initialize(tensor)
-        # Salviamo il tensore negli inputs per il backtracing
+        # Store the tensor in inputs for backtracking.
         @inputs = [tensor]
       end
 
       def forward
         tensor = @inputs.first
 
-        # Il risultato della somma è un singolo valore scalare che conteniene
-        # la somma di tutti gli elementi
+        # The result of the sum is a single scalar value containing
+        # the sum of all elements.
         result_data = tensor.data.sum
 
         requires_grad = tensor.requires_grad
@@ -31,12 +31,12 @@ module Maurograd
         return unless tensor.requires_grad
 
 
-        # Se y = sum(x), allora dy/dx_i = 1 per ogni i.
-        # Il gradiente totale è grad_output * 1, espanso sulla forma di tensor.
+        # If y = sum(x), then dy/dx_i = 1 for every i.
+        # The total gradient is grad_output * 1, broadcast to tensor's shape.
         #
-        # grad_output è uno scalare. Usiamo Numo::SFloat.cast per assicurarci
-        # che grad_output sia trattato correttamente e poi lo moltiplichiamo
-        # per un array di 1 della stessa forma dell'input.
+        # grad_output is a scalar. We use Numo::SFloat.cast to make sure
+        # grad_output is handled correctly, then multiply it by an array
+        # of ones with the same shape as the input.
         ones = Numo::SFloat.ones(*tensor.data.shape)
         grad_input = grad_output * ones
 

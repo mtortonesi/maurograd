@@ -36,7 +36,7 @@ describe Maurograd::Datasets::MNIST do
       write_raw(images, idx_images_bytes(n, rows, cols))
       write_raw(labels, idx_labels_bytes(n))
 
-      # sanity: se fallisce qui, il problema è nei path
+      # sanity check: if this fails, the problem is in the paths
       expect(File.exist?(images)).to be == true
       expect(File.exist?(labels)).to be == true
 

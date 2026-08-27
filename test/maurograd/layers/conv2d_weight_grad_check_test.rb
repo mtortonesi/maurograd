@@ -2,26 +2,26 @@ require 'maurograd/tensor'
 require 'maurograd/layers/conv2d'
 
 describe "Conv2D Gradient Check" do
-  it "ha un gradiente analitico che corrisponde a quello numerico" do
+  it "has an analytic gradient that matches the numerical one" do
     epsilon = 1e-4
     tolerance = 1e-5
 
-    # 1. Setup: Piccola convoluzione per velocità
+    # 1. Setup: small convolution for speed.
     conv = Maurograd::Layers::Conv2D.new(1, 1, 2, stride: 1, padding: 0)
     input = Maurograd::Tensor.new(Numo::SFloat.new(1, 1, 3, 3).rand, requires_grad: true)
 
-    # 2. Forward e Backward analitico
+    # 2. Analytic forward and backward.
     output = conv.forward(input)
 
-    # Usiamo la somma dei quadrati come funzione di Loss scalare
+    # Use the sum of squares as a scalar loss function.
     loss = (output**2).sum
     loss.backward
 
-    # Salviamo il gradiente analitico calcolato dal tuo framework
-    # Ne controlliamo solo uno per brevità (es. il peso [0,0,0,0])
-    grad_analitico = conv.weights.grad[0, 0, 0, 0]
+    # Save the analytic gradient computed by the framework.
+    # We only check one element for brevity (e.g. weight [0,0,0,0]).
+    grad_analytic = conv.weights.grad[0, 0, 0, 0]
 
-    # 3. Calcolo Gradiente Numerico
+    # 3. Numerical gradient computation.
     original_weight = conv.weights.data[0, 0, 0, 0]
 
     # Loss(W + epsilon)
@@ -34,11 +34,10 @@ describe "Conv2D Gradient Check" do
     out_minus = conv.forward(input)
     loss_minus = (out_minus**2).sum.data
 
-    grad_numerico = (loss_plus - loss_minus) / (2 * epsilon)
+    grad_numeric = (loss_plus - loss_minus) / (2 * epsilon)
 
-    # 4. Confronto
-    diff = (grad_analitico - grad_numerico).abs
-    # puts "Analitico: #{grad_analitico}, Numerico: #{grad_numerico.to_f}, Diff: #{diff.to_f}"
+    # 4. Compare.
+    diff = (grad_analytic - grad_numeric).abs
 
     expect(diff).to be < tolerance
   end

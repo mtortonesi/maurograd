@@ -31,12 +31,12 @@ module Maurograd
 
       def self.fetch(dest_path:, urls:, expected_md5: nil,
                      force: false, timeout: 30)
-        # Se esiste già e (se richiesto) l'MD5 è ok, esci subito
+        # If it already exists and (if requested) the MD5 checks out, return right away.
         if !force && File.exist?(dest_path)
           if expected_md5
             got = Digest::MD5.file(dest_path).hexdigest
             return dest_path if got == expected_md5
-            # se l'MD5 non torna, riscarichiamo
+            # MD5 mismatch: re-download below.
           else
             return dest_path
           end
@@ -46,7 +46,7 @@ module Maurograd
         tmp = dest_path + ".tmp"
         errors = []
 
-        # Prova ogni mirror/URL
+        # Try each mirror/URL.
         Array(urls).each do |u|
           uri = u.is_a?(URI) ? u : URI.parse(u.to_s)
           begin
@@ -136,10 +136,10 @@ module Maurograd
           x = Numo::SFloat.cast(x)
         end
 
-        # spesso utile: aggiungere canale per CNN: [N, 1, 28, 28]
+        # Often useful: add a channel dimension for CNNs: [N, 1, 28, 28]
         x = x.reshape(x.shape[0], 1, 28, 28)
 
-        [x, y] # y puoi lasciarlo UInt8 (class indices)
+        [x, y] # y can be left as UInt8 (class indices)
       end
 
       # ------------------------------------------------------------

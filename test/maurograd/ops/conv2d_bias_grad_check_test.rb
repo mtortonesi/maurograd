@@ -63,7 +63,7 @@ describe Maurograd::Ops::Conv2D do
     g_num = (loss_plus - loss_minus) / (2.0 * eps)
     g_aut = bt.grad[co].to_f
 
-    # Tolleranza: per float32 + finite diff, 1e-2 è ragionevole; puoi stringere a 1e-3 se tutto è molto stabile
+    # Tolerance: for float32 + finite differences, 1e-2 is reasonable; tighten to 1e-3 if everything is very stable
     err = (g_aut - g_num).abs
     assert err < 1e-2, "bias grad mismatch: aut=#{g_aut} num=#{g_num} err=#{err}"
   end

@@ -48,9 +48,9 @@ epochs.times do |i|
 
     ps = bx.map { |x| mlp.call(inputs: x).sigmoid }
 
-    # BCE media sul batch
+    # BCE averaged over the batch
     bce_terms = ps.each_with_index.map do |p, j|
-      y = by[j]                                   # y ∈ {0.0, 1.0} (usa to_f nei label!)
+      y = by[j]                                   # y in {0.0, 1.0} (labels are already floats)
       term1 = (p + eps).log * (-y)                # - y * log(p + eps)
       term2 = (1.0 - p + eps).log * (-(1.0 - y))  # - (1 - y) * log(1 - p + eps)
       term1 + term2
@@ -71,7 +71,7 @@ epochs.times do |i|
     mlp.parameters.each { |param| param.data += -lr * param.gradient }
 
     # gmean = mlp.parameters.map { |p| p.gradient.abs }.sum / mlp.parameters.length.to_f
-    # puts "gmean=#{gmean}"  # deve essere > 0 e non esplodere
+    # puts "gmean=#{gmean}"  # should be > 0 and not blow up
   end
 
   puts "Average loss within this epoch: #{losses.sum / losses.length}"
@@ -86,7 +86,7 @@ puts "Predictions on test set: #{predictions}"
 puts "Actual labels on test set: #{actual}"
 
 
-# Accuracy complessiva su tutto il test
+# Overall accuracy on the whole test set
 puts "\nEvaluating on the entire test set..."
 all_probs = test_set[:inputs].map { |x| mlp.call(inputs: x).sigmoid.data }
 all_pred  = all_probs.map { |p| p >= 0.5 ? 1 : 0 }

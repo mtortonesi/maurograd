@@ -351,7 +351,7 @@ static VALUE mg_conv2d_forward(VALUE self,
     if (vbias != Qnil) {
         narray_t *nb;
         GetNArray(vbias, nb);
-        // bias expected [Cout] or [1,Cout]… (puoi rendere più permissivo dopo)
+        // bias expected [Cout] or [1,Cout] (could be made more permissive later)
         b = (const float*)na_get_pointer_for_read(vbias);
     }
 
@@ -449,9 +449,9 @@ static void* conv2d_backward_nogvl(void *ptr)
 {
     conv2d_bwd_args *a = (conv2d_bwd_args*)ptr;
 
-    // Precondizione: se serve qualcosa, dout2d deve esistere
+    // Precondition: if anything is needed, dout2d must exist.
     if ((a->want_dx || a->want_dw || a->want_db) && !a->dout2d) {
-        return NULL; // meglio sarebbe non arrivarci mai
+        return NULL; // should never actually get here
     }
 
 
@@ -479,7 +479,7 @@ static void* conv2d_backward_nogvl(void *ptr)
 
     // 3) dw
     if (a->want_dw && a->dw) {
-        // Per dw serve col
+        // dw needs col.
         if (a->col) {
             if (!a->have_col) {
                 im2col_f32(a->x, a->col,
@@ -498,8 +498,9 @@ static void* conv2d_backward_nogvl(void *ptr)
                         0.0f,
                         a->dw, a->K);
         }
-        // niente return: se col fosse NULL, meglio lasciare non calcolato,
-        // ma in realtà NON dovrebbe accadere (vedi fix 2 sotto).
+        // No early return here: if col were NULL, it's better to leave dw
+        // uncomputed than to crash, but this should never actually happen
+        // (the caller guarantees col is allocated whenever want_dw is set).
     }
 
     if (a->want_dw && a->dw) {
@@ -510,7 +511,7 @@ static void* conv2d_backward_nogvl(void *ptr)
 
     // 4) dx
     if (a->want_dx && a->dx) {
-        // Per dx NON serve col; serve dcol
+        // dx does NOT need col; it needs dcol.
         if (a->dcol) {
             cblas_sgemm(CblasRowMajor,
                         CblasNoTrans, CblasNoTrans,
@@ -539,85 +540,13 @@ static void* conv2d_backward_nogvl(void *ptr)
                 }
             }
         }
-        // niente return
+        // no early return
     }
 
 
 
     return NULL;
 }
-
-
-
-/*
-static void* conv2d_backward_nogvl(void *ptr)
-{
-    conv2d_bwd_args *a = (conv2d_bwd_args*)ptr;
-
-    if ((a->want_dx || a->want_dw || a->want_db) && !a->dout2d) return NULL;
-
-    // 1) dout2d
-    if (a->dout2d) {
-        pack_dout2d_nchw(a->dout, a->dout2d, a->N, a->Cout, a->OH, a->OW);
-    }
-
-    // 2) db
-    if (a->want_db && a->db) {
-        reduce_dbias(a->dout2d, a->db, a->rows, a->Cout);
-    }
-
-    // 3) dw needs col
-    if (a->want_dw && a->dw) {
-        if (!a->col) return NULL;
-                                  //
-        if (a->have_col == false) {
-            // need to compute col
-            // col = im2col(x)
-            im2col_f32(a->x, a->col,
-                       a->N, a->C, a->H, a->W,
-                       a->Kh, a->Kw,
-                       a->stride, a->pad,
-                       a->OH, a->OW);
-        }
-
-        if (!a->dout2d) return NULL;
-
-        // dw(Cout,K) = dout2d^T(Cout,rows) * col(rows,K)
-        cblas_sgemm(CblasRowMajor,
-                    CblasTrans, CblasNoTrans,
-                    a->Cout, a->K, a->rows,
-                    1.0f,
-                    a->dout2d, a->Cout,  // A is [rows,Cout], trans => [Cout,rows], lda = Cout
-                    a->col, a->K,        // B is [rows,K], ldb = K
-                    0.0f,
-                    a->dw, a->K);        // C is [Cout,K], ldc = K
-    }
-
-    // 4) dx needs dcol
-    if (a->want_dx && a->dx) {
-        if (!a->col) return NULL;
-
-        // dcol(rows,K) = dout2d(rows,Cout) * w(Cout,K)
-        cblas_sgemm(CblasRowMajor,
-                    CblasNoTrans, CblasNoTrans,
-                    a->rows, a->K, a->Cout,
-                    1.0f,
-                    a->dout2d, a->Cout, // [rows,Cout]
-                    a->w, a->K,         // [Cout,K]
-                    0.0f,
-                    a->dcol, a->K);     // [rows,K]
-
-        // dx = col2im(dcol)
-        col2im_f32(a->dcol, a->dx,
-                   a->N, a->C, a->H, a->W,
-                   a->Kh, a->Kw,
-                   a->stride, a->pad,
-                   a->OH, a->OW);
-    }
-
-    return NULL;
-}
-*/
 
 
 /* ---------- Maurograd::Ext.conv2d_backward ---------- */

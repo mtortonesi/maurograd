@@ -8,13 +8,13 @@ module Maurograd
       attr_reader :inputs
 
       def initialize(tensor, exponent)
-        # Verifichiamo che l'esponente sia un numero (Integer, Float, etc.)
+        # Check that the exponent is a number (Integer, Float, etc.)
         unless exponent.is_a?(Numeric)
-          raise ArgumentError, "L'esponente deve essere un valore numerico scalare, non un #{exponent.class}"
+          raise ArgumentError, "The exponent must be a scalar numeric value, not a #{exponent.class}"
         end
-        # Salviamo il tensore negli inputs per il backtracing
+        # Store the tensor in inputs for backtracking.
         @inputs = [tensor]
-        # Salviamo l'esponente come parametro statico
+        # Store the exponent as a static parameter.
         @exponent = exponent
       end
 
@@ -33,10 +33,10 @@ module Maurograd
         tensor = @inputs.first
         return unless tensor.requires_grad
 
-        # Calcolo locale della derivata: n * x^(n-1)
+        # Local derivative: n * x^(n-1)
         local_derivative = @exponent * (tensor.data ** (@exponent - 1))
 
-        # Accumulo del gradiente (Chain Rule)
+        # Accumulate the gradient (chain rule)
         grad_input = grad_output * local_derivative
 
         tensor.accumulate_grad(grad_input)
