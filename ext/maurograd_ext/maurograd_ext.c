@@ -10,11 +10,9 @@
 
 #include <cblas.h>   // OpenBLAS (cblas_*)
 
-extern void openblas_set_num_threads(int);
-
 /*
  * Minimal helpers: type checks and pointer access.
- * NB: usare le API Numo per ottenere puntatori PRIMA di rilasciare il GVL.
+ * NB: use the Numo API to get pointers BEFORE releasing the GVL.
  */
 
 static VALUE mMaurograd;
@@ -862,8 +860,6 @@ void Init_maurograd_ext(void)
     id_col = rb_intern("col");
     sym_col = ID2SYM(id_col);
     rb_global_variable(&sym_col); // optional, but good for safety
-
-    openblas_set_num_threads(1);
 }
 
 /*
