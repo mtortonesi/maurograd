@@ -28,16 +28,6 @@ static VALUE sym_col;
 /* ---------- Helper functions ---------- */
 #include <math.h>
 
-static inline float absmax(const float *p, size_t n) {
-    float m = 0.0f;
-    for (size_t i = 0; i < n; i++) {
-        float v = fabsf(p[i]);
-        if (v > m) m = v;
-    }
-    return m;
-}
-
-
 static inline int any_nonfinite(const float *p, size_t n) {
     for (size_t i = 0; i < n; i++) {
         if (!isfinite(p[i])) return 1;
@@ -65,26 +55,6 @@ static inline int sz_to_int(size_t v, const char *name)
 }
 
 /* ---------- reusable GEMM (row-major) ---------- */
-
-static inline void sgemm_rowmajor_nn(int M, int N, int K,
-                                    const float *A, const float *B, float *C)
-{
-    // C = A*B  where:
-    // A: (M,K) row-major
-    // B: (K,N) row-major
-    // C: (M,N) row-major
-    const float alpha = 1.0f;
-    const float beta  = 0.0f;
-
-    cblas_sgemm(CblasRowMajor,
-                CblasNoTrans, CblasNoTrans,
-                M, N, K,
-                alpha,
-                A, K,      // lda = K
-                B, N,      // ldb = N
-                beta,
-                C, N);     // ldc = N
-}
 
 static inline void sgemm_rowmajor_nt(int M, int N, int K,
                                     const float *A, const float *B, float *C,
