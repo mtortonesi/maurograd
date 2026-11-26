@@ -9,7 +9,6 @@
 #   @ctx_save_for_backward = [a.data, b.data]
 #   # ...
 # end
-require "numo/linalg"
 
 module Maurograd
   module Ops
@@ -26,14 +25,15 @@ module Maurograd
 
       def forward
         a, b = @inputs
+        @backend = Ops.backend_of(a, b)
 
         # We multiply the underlying contents of the a and b tensors with
-        # Numo::NArray using the .dot method
-        result_data = a.data.dot(b.data)
+        # the backend's 2D matrix product.
+        result_data = @backend.matmul(a.data, b.data)
 
         # The output requires the gradient if at least one of the inputs requires it.
         requires_grad = a.requires_grad || b.requires_grad
-        result = Tensor.new(result_data, requires_grad: requires_grad)
+        result = Tensor.new(result_data, requires_grad: requires_grad, backend: @inputs.first.backend)
 
         # We set the creator ONLY if it is needed for backward
         result.creator = self if requires_grad
@@ -71,13 +71,13 @@ module Maurograd
         if a.requires_grad
           # grad_a = grad_output @ B.T (transposing the last 2 dimensions of B)
           # Note: transpose(-1, -2) and transpose(-2, -1) are, of course, equivalent
-          grad_a = grad_output.dot(b.data.transpose(-1, -2))
+          grad_a = @backend.matmul(grad_output, @backend.transpose(b.data, 1, 0))
           a.accumulate_grad(grad_a)
         end
 
         if b.requires_grad
           # grad_b = A.T (transposing the last 2 dimensions of A) @ grad_output
-          grad_b = a.data.transpose(-1, -2).dot(grad_output)
+          grad_b = @backend.matmul(@backend.transpose(a.data, 1, 0), grad_output)
           b.accumulate_grad(grad_b)
         end
       end

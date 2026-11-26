@@ -24,8 +24,8 @@ module Maurograd
     #   dx = dout * mask
     # (dropped elements get no gradient, kept ones get it scaled by 1/(1-p)).
     #
-    # The mask is drawn from Numo::NArray's global RNG, so Maurograd.seed!
-    # makes it reproducible.
+    # The mask is drawn from the backend's random number generator, so
+    # Maurograd.seed! makes it reproducible.
     class Dropout
       def self.apply(input, p: 0.5, training: true)
         new(input, p, training).forward
@@ -54,19 +54,18 @@ module Maurograd
         # the input itself keeps the graph unchanged (no extra node at all).
         return input if !@training || @p == 0.0
 
-        x = input.data
+        bk = input.backend
         @mask = if @p >= 1.0 # i.e. p == 1, since validate_p! caps it at 1
           # Everything dropped; avoid the 1 / (1 - p) division by zero.
-          Numo::SFloat.zeros(*x.shape)
+          bk.zeros(input.shape)
         else
-          keep = Numo::SFloat.new(*x.shape).rand >= @p
-          Numo::SFloat.cast(keep) * (1.0 / (1.0 - @p))
+          bk.bernoulli(input.shape, 1.0 - @p) * (1.0 / (1.0 - @p))
         end
 
-        y = x * @mask
+        y = input.data * @mask
 
         requires_grad = input.requires_grad
-        out = Tensor.new(y, requires_grad: requires_grad)
+        out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end

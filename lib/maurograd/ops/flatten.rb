@@ -26,18 +26,19 @@ module Maurograd
       end
 
       def forward
-        x = @inputs.first.data
-        @orig_shape = x.shape
+        input = @inputs.first
+        x = input.data
+        @orig_shape = input.shape
 
         # Keep batch dimension N intact.
         n = @orig_shape[0]
         raise "Flatten expects at least 1 dimension" if n.nil?
 
-        flat_dim = x.size / n
-        y = x.reshape(n, flat_dim)
+        flat_dim = input.size / n
+        y = input.backend.reshape(x, n, flat_dim)
 
         requires_grad = @inputs.first.requires_grad
-        out = Tensor.new(y, requires_grad: requires_grad)
+        out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -47,7 +48,7 @@ module Maurograd
         return unless input.requires_grad
 
         dy = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        dx = dy.reshape(*@orig_shape)
+        dx = input.backend.reshape(dy, *@orig_shape)
         input.accumulate_grad(dx)
       end
     end

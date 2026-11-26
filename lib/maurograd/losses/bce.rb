@@ -46,14 +46,15 @@ module Maurograd
         @y = target.data
 
         # Compute BCE in raw Numo space.
-        term1 = @y * Numo::NMath.log(@p + @eps)
-        term2 = (1.0 - @y) * Numo::NMath.log(1.0 - @p + @eps)
+        bk = @backend = pred.backend
+        term1 = @y * bk.log(@p + @eps)
+        term2 = (1.0 - @y) * bk.log(1.0 - @p + @eps)
 
         @n_elems = term1.size
-        loss_data = -(term1 + term2).sum / @n_elems.to_f
+        loss_data = -bk.sum(term1 + term2) / @n_elems.to_f
 
         requires_grad = pred.requires_grad || target.requires_grad
-        out = Tensor.new(loss_data, requires_grad: requires_grad)
+        out = Tensor.new(loss_data, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -62,7 +63,6 @@ module Maurograd
         pred, target = @inputs
 
         gout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        gout = Numo::SFloat.cast(gout)
 
         # dL/dp (mean reduction) times upstream gradient.
         #
@@ -80,7 +80,7 @@ module Maurograd
         #
         # dL/dy = -(1/N) * [ log(p+eps) - log(1-p+eps) ]
         if target.requires_grad
-          dldy = -inv_n * (Numo::NMath.log(@p + @eps) - Numo::NMath.log(1.0 - @p + @eps))
+          dldy = -inv_n * (@backend.log(@p + @eps) - @backend.log(1.0 - @p + @eps))
           gtgt = gout * dldy
           target.accumulate_grad(gtgt)
         end

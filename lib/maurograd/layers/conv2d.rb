@@ -121,6 +121,12 @@ module Maurograd
         Maurograd::Ops::Conv2D.apply(input, @weights, @bias, @stride, @padding)
       end
 
+      # Moves the parameters to another backend (see Tensor#to).
+      def to(backend)
+        parameters.each { |p| p.to(backend) }
+        self
+      end
+
       def parameters
         [@weights, @bias]
       end

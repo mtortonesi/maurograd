@@ -40,9 +40,9 @@ module Maurograd
     #
     #   dx = dxhat / sqrt(running_var + eps)
     #
-    # Implementation: the per-element math runs in the C extension
-    # (Ext.batchnorm2d_forward/backward), one channel at a time, with the
-    # sums accumulated in double precision. Substituting dvar and dmu into dx
+    # Implementation: the per-element math is a backend kernel (on the CPU
+    # backend, Ext.batchnorm2d_forward/backward in C, one channel at a time,
+    # with the sums accumulated in double precision). Substituting dvar and dmu into dx
     # above and simplifying gives the compact per-channel form it uses:
     #
     #   dx = gamma * inv_std / m * (m * dout - sum(dout) - x_hat * sum(dout * x_hat))
@@ -52,72 +52,62 @@ module Maurograd
     # in Ruby.
     #
     class BatchNorm2D
-      def self.apply(input, gamma, beta, running_mean:, running_var:, training: true, momentum: 0.1, eps: 1e-5)
-        new(input, gamma, beta, running_mean, running_var, training, momentum, eps).forward
+      # `stats` holds the running statistics: any object with
+      # running_mean/running_var readers and writers (Layers::BatchNorm2D
+      # passes itself). In training mode they are replaced with their
+      # updated values; arrays are never modified in place, since not every
+      # backend's arrays are mutable.
+      def self.apply(input, gamma, beta, stats:, training: true, momentum: 0.1, eps: 1e-5)
+        new(input, gamma, beta, stats, training, momentum, eps).forward
       end
 
       attr_reader :inputs
 
-      def initialize(input, gamma, beta, running_mean, running_var, training, momentum, eps)
+      def initialize(input, gamma, beta, stats, training, momentum, eps)
         @inputs = [input, gamma, beta].compact
         @input = input
         @gamma = gamma
         @beta = beta
-        @running_mean = running_mean
-        @running_var = running_var
+        @stats = stats
         @training = training
         @momentum = momentum
         @eps = eps
       end
 
       def forward
-        x = Utils.sfloat_contiguous(@input.data)
-        n, _c, h, w = x.shape
+        @backend = bk = Ops.backend_of(*@inputs)
+        n, _c, h, w = @input.shape
         m = n * h * w
 
-        gamma = @gamma && Utils.sfloat_contiguous(@gamma.data)
-        beta = @beta && Utils.sfloat_contiguous(@beta.data)
-
-        y, x_hat, mean, var, inv_std =
-          if @training
-            Maurograd::Ext.batchnorm2d_forward(x, nil, nil, gamma, beta, @eps)
-          else
-            Maurograd::Ext.batchnorm2d_forward(
-              x, Utils.sfloat_contiguous(@running_mean), Utils.sfloat_contiguous(@running_var),
-              gamma, beta, @eps
-            )
-          end
+        mean, var = @training ? [nil, nil] : [@stats.running_mean, @stats.running_var]
+        y, @ctx, batch_mean, batch_var =
+          bk.batchnorm2d_forward(@input.data, mean, var, @gamma&.data, @beta&.data, @eps)
 
         if @training
-          # Exponential moving average into the running buffers, in place
-          # (`arr[] = ...` overwrites arr's contents without rebinding it,
-          # which matters since the Layer holds the same array by reference).
-          # Unbiased variance estimate (Bessel's correction) for the running
-          # value, matching the common convention; `var` itself is biased.
-          unbiased_var = var * (m.to_f / (m - 1))
-          @running_mean[] = (@running_mean * (1.0 - @momentum)) + (mean.reshape(*@running_mean.shape) * @momentum)
-          @running_var[] = (@running_var * (1.0 - @momentum)) + (unbiased_var.reshape(*@running_var.shape) * @momentum)
+          # Exponential moving average of the batch statistics. Unbiased
+          # variance estimate (Bessel's correction) for the running value,
+          # matching the common convention; batch_var itself is biased.
+          shape = @stats.running_mean.shape
+          unbiased_var = batch_var * (m.to_f / (m - 1))
+          @stats.running_mean = (@stats.running_mean * (1.0 - @momentum)) + (bk.reshape(batch_mean, *shape) * @momentum)
+          @stats.running_var = (@stats.running_var * (1.0 - @momentum)) + (bk.reshape(unbiased_var, *shape) * @momentum)
         end
 
+        # ctx (cached for backward) holds x_hat and inv_std. In training
+        # mode inv_std comes from the *batch* statistics; in eval mode from
+        # the running ones (fixed constants, hence no dvar/dmu term there).
         requires_grad = @inputs.any?(&:requires_grad)
-        if requires_grad
-          # Cached for backward. In training mode inv_std comes from the
-          # *batch* statistics; in eval mode from the running ones (fixed
-          # constants, hence no dvar/dmu term there).
-          @x_hat = x_hat
-          @inv_std = inv_std
-          @gamma_data = gamma
-        end
+        @ctx = nil unless requires_grad
 
-        out = Tensor.new(y, requires_grad: requires_grad)
+        out = Tensor.new(y, requires_grad: requires_grad, backend: bk)
         out.creator = self if requires_grad
         out
       end
 
       def backward(grad_output)
-        dout = Utils.sfloat_contiguous(grad_output)
+        dout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
 
-        dx, dgamma, dbeta = Maurograd::Ext.batchnorm2d_backward(dout, @x_hat, @inv_std, @gamma_data, @training)
+        dx, dgamma, dbeta = @backend.batchnorm2d_backward(@ctx, dout, training: @training)
 
         @gamma.accumulate_grad(dgamma) if @gamma&.requires_grad
         @beta.accumulate_grad(dbeta) if @beta&.requires_grad

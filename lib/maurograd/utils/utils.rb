@@ -21,12 +21,13 @@ module Maurograd
     # extra leading axes that were added).
     #
     # Params:
-    # - grad:  Numo::NArray gradient (shape = broadcasted shape)
-    # - shape: target/original shape we want to reduce back to
+    # - grad:    native array gradient (shape = broadcasted shape)
+    # - shape:   target/original shape we want to reduce back to
+    # - backend: the backend `grad` belongs to
     #
     # Returns:
-    # - A Numo::NArray with shape == `shape`
-    def self.unbroadcast(grad, shape)
+    # - A native array with shape == `shape`
+    def self.unbroadcast(grad, shape, backend = Maurograd.backend)
       # If shapes already match, nothing to do.
       return grad if grad.shape == shape
 
@@ -41,7 +42,7 @@ module Maurograd
       # This happens when an operand had fewer dimensions and was implicitly
       # left-padded with ones. We reduce along axis 0 until ranks match.
       while res.ndim > shape.length
-        res = res.sum(axis: 0, keepdims: false)
+        res = backend.sum(res, axis: 0, keepdims: false)
       end
 
       # 2) For remaining axes, if the target shape has a 1, that axis was broadcast.
@@ -51,7 +52,7 @@ module Maurograd
         next if dim == shape[i]
 
         if shape[i] == 1
-          res = res.sum(axis: i, keepdims: true)
+          res = backend.sum(res, axis: i, keepdims: true)
         else
           # If shapes differ and target axis is not 1, it's a shape mismatch.
           raise ArgumentError, "Incompatible shapes for unbroadcast: grad #{res.shape} vs target #{shape}"
@@ -92,16 +93,6 @@ module Maurograd
       out
     end
 
-    # Returns `a` as a contiguous Numo::SFloat, converting/copying only when
-    # needed. The C kernels require exactly that (they read raw float32
-    # memory), while arrays reaching an op can be strided views (e.g. after
-    # a transpose) or another dtype (e.g. a DFloat upstream gradient).
-    def self.sfloat_contiguous(a)
-      a = a.data if a.is_a?(Maurograd::Tensor)
-      a = Numo::SFloat.cast(a) unless a.is_a?(Numo::SFloat)
-      a.contiguous? ? a : a.copy
-    end
-
     def self.im2col(*args)
       Maurograd::Ext.im2col(*args)
     end
@@ -123,9 +114,12 @@ module Maurograd
       # is known to be numerically stable.
       return unless Maurograd.debug
 
-      # na is a Numo::NArray.
+      # Debug-only, so a host copy for non-CPU backends is acceptable.
+      na = na.data if na.is_a?(Maurograd::Tensor)
+      na = na.to_numo if na.respond_to?(:to_numo) && !na.is_a?(Numo::NArray)
+
       # Numo does not provide isfinite? universally, so we use two checks:
-      flat = na.flatten
+      flat = Numo::NArray.cast(na).flatten
       # NaN check: NaN != NaN is true in IEEE 754.
       if flat.ne(flat).any?
         raise "Non-finite detected (NaN) at #{where}"
@@ -174,7 +168,7 @@ module Maurograd
         next unless p.grad
         g = p.grad
         # Sum of squared gradient elements.
-        total_sq += (g * g).sum.to_f
+        total_sq += p.backend.item(p.backend.sum(g * g))
       end
 
       total_norm = Math.sqrt(total_sq)
@@ -182,7 +176,7 @@ module Maurograd
         scale = max_norm / (total_norm + eps)
         params.each do |p|
           next unless p.grad
-          p.grad.inplace * scale
+          p.grad *= scale
         end
       end
 

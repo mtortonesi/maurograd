@@ -70,7 +70,7 @@ def train_epoch(model, x, y, optimizer, batch_size:, seed:, epoch:)
 
         if (i % 10).zero?
           tb1 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          puts "Epoch #{epoch} | batch #{i} | dt=#{(tb1 - tb0).round(2)}s | loss #{loss.data.to_f}"
+          puts "Epoch #{epoch} | batch #{i} | dt=#{(tb1 - tb0).round(2)}s | loss #{loss.item}"
           tb0 = tb1
         end
         i += 1
@@ -102,7 +102,7 @@ def train_epoch(model, x, y, optimizer, batch_size:, seed:, epoch:)
 
       if (i % 10).zero?
         tb1 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        puts "Epoch #{epoch} | batch #{i} | dt=#{(tb1 - tb0).round(2)}s | loss #{loss.data.to_f}"
+        puts "Epoch #{epoch} | batch #{i} | dt=#{(tb1 - tb0).round(2)}s | loss #{loss.item}"
         tb0 = tb1
       end
       i += 1
@@ -130,9 +130,9 @@ def evaluate(model, x, y, batch_size:)
       requires_grad: false
     )
     logits = model.forward(xb_e)
-    pred = logits.data.max_index(axis: 1) % 10
+    pred = logits.to_numo.max_index(axis: 1) % 10
 
-    correct += pred.eq(yb_e.data).count_true
+    correct += pred.eq(yb_e.to_numo).count_true
     total += yb_e.shape[0]
   end
 

@@ -72,8 +72,8 @@ module Maurograd
           g = grad
           g += @weight_decay * p.data if @weight_decay > 0
 
-          @m[i] ||= Numo::SFloat.zeros(*p.shape)
-          @v[i] ||= Numo::SFloat.zeros(*p.shape)
+          @m[i] ||= p.backend.zeros(p.shape)
+          @v[i] ||= p.backend.zeros(p.shape)
 
           @m[i] = (@beta1 * @m[i]) + ((1.0 - @beta1) * g)
           @v[i] = (@beta2 * @v[i]) + ((1.0 - @beta2) * (g**2))
@@ -81,7 +81,7 @@ module Maurograd
           m_hat = @m[i] / bias_correction1
           v_hat = @v[i] / bias_correction2
 
-          p.data -= @lr * m_hat / (Numo::NMath.sqrt(v_hat) + @eps)
+          p.data -= @lr * m_hat / (p.backend.sqrt(v_hat) + @eps)
         end
       end
     end

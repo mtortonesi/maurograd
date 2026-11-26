@@ -25,9 +25,10 @@ module Maurograd
 
       def forward
         a, b = @inputs
+        @backend = Ops.backend_of(a, b)
         out_data = a.data * b.data
         requires_grad = a.requires_grad || b.requires_grad
-        out = Tensor.new(out_data, requires_grad: requires_grad)
+        out = Tensor.new(out_data, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -38,12 +39,12 @@ module Maurograd
 
         if a.requires_grad
           ga = gout * b.data
-          a.accumulate_grad(Utils.unbroadcast(ga, a.shape))
+          a.accumulate_grad(Utils.unbroadcast(ga, a.shape, @backend))
         end
 
         if b.requires_grad
           gb = gout * a.data
-          b.accumulate_grad(Utils.unbroadcast(gb, b.shape))
+          b.accumulate_grad(Utils.unbroadcast(gb, b.shape, @backend))
         end
       end
     end

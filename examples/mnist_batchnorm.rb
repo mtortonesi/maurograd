@@ -82,7 +82,7 @@ def train_epoch(model, x, y, optimizer, batch_size:, seed:)
 
     optimizer.step
 
-    total_loss += loss.data.to_f
+    total_loss += loss.item
     batches += 1
   end
 
@@ -101,9 +101,9 @@ def evaluate(model, x, y, batch_size:)
     yb_t = to_tensor(yb)
 
     logits = model.forward(xb_t)
-    pred = logits.data.max_index(axis: 1) % 10
+    pred = logits.to_numo.max_index(axis: 1) % 10
 
-    correct += pred.eq(yb_t.data).count_true
+    correct += pred.eq(yb_t.to_numo).count_true
     total += yb_t.shape[0]
   end
 

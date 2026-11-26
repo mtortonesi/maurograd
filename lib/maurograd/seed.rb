@@ -17,8 +17,8 @@ module Maurograd
   # - Weight initialization in any layer constructed without its own
   #   explicit seed: (Layers::Conv2D, Layers::Linear) - they fall back to
   #   Numo::NArray's global RNG, which this reseeds.
-  # - Dropout masks (Ops::Dropout / Layers::Dropout), drawn from that same
-  #   global Numo RNG.
+  # - Dropout masks (Ops::Dropout / Layers::Dropout), drawn from each
+  #   backend's RNG (the same global Numo RNG on the CPU backend).
   # - Ruby's own Kernel#rand, in case other code relies on it.
   #
   # Does NOT affect Datasets::Batching.batches, which already has its own
@@ -27,6 +27,8 @@ module Maurograd
   def self.seed!(n)
     Numo::NArray.srand(n)
     srand(n)
+    # Every loaded backend's own RNG too (e.g. MLX's, for its Dropout masks).
+    Backends.loaded.each { |b| b.seed(n) } if defined?(Backends)
     n
   end
 end

@@ -10,7 +10,8 @@ module Maurograd
     #
     # Pooling is per-channel (no mixing across channels).
     #
-    # Both passes run in the C extension (Ext.maxpool2d_forward/backward):
+    # Both passes are backend kernels; on the CPU backend, C functions in
+    # maurograd_ext (Ext.maxpool2d_forward/backward):
     #
     # Forward: for every output position, scan its KH x KW window and record
     # both the maximum (-> Y) and WHERE it was (-> @argmax, the flat index
@@ -42,9 +43,9 @@ module Maurograd
         @stride = stride
         @padding = padding
 
-        # Cached for backward:
-        @input_shape = nil
-        @argmax = nil # Int32 [N, C, OH, OW], flat index into the input (-1 = padding)
+        # Cached for backward: backend-specific (on the CPU backend, an
+        # Int32 [N, C, OH, OW] array of flat input indices, -1 = padding).
+        @ctx = nil
       end
 
       def forward
@@ -63,16 +64,13 @@ module Maurograd
         # there. With non-negative inputs (e.g. after ReLU, the usual case)
         # the two conventions agree.
         input = @inputs.first
-        x = input.data
-        x = x.copy unless x.contiguous?
-        @input_shape = x.shape
 
-        y, argmax = Maurograd::Ext.maxpool2d_forward(x, @kernel_h, @kernel_w, @stride, @padding)
+        y, ctx = input.backend.maxpool2d_forward(input.data, @kernel_h, @kernel_w, @stride, @padding)
 
         requires_grad = input.requires_grad
-        @argmax = argmax if requires_grad
+        @ctx = ctx if requires_grad
 
-        out = Tensor.new(y, requires_grad: requires_grad)
+        out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -84,9 +82,8 @@ module Maurograd
         return unless input.requires_grad
 
         dout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        dout = dout.copy unless dout.contiguous?
 
-        dx = Maurograd::Ext.maxpool2d_backward(dout, @argmax, @input_shape)
+        dx = input.backend.maxpool2d_backward(@ctx, dout)
         input.accumulate_grad(dx)
       end
     end

@@ -41,8 +41,9 @@ module Maurograd
         @momentum = momentum
         @weight_decay = weight_decay
 
-        # Velocity buffers, aligned with @params (allocated lazily on the
-        # first step that touches each parameter).
+        # Velocity buffers, aligned with @params (set on the first step that
+        # touches each parameter). Arrays are never modified in place, so
+        # the first velocity can simply be the gradient array itself.
         @velocities = Array.new(params.size)
       end
 
@@ -58,7 +59,7 @@ module Maurograd
           g += @weight_decay * p.data if @weight_decay > 0
 
           if @momentum > 0
-            @velocities[i] = @velocities[i] ? (@momentum * @velocities[i]) + g : g.copy
+            @velocities[i] = @velocities[i] ? (@momentum * @velocities[i]) + g : g
             g = @velocities[i]
           end
 

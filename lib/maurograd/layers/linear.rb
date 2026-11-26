@@ -38,6 +38,12 @@ module Maurograd
         Maurograd::Ops::Linear.apply(input, @weights, @bias)
       end
 
+      # Moves the parameters to another backend (see Tensor#to).
+      def to(backend)
+        parameters.each { |p| p.to(backend) }
+        self
+      end
+
       def parameters
         ps = [@weights]
         ps << @bias if @bias

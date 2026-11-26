@@ -1,6 +1,9 @@
 require "numo/narray"
 require "set"
 
+require_relative "backends"
+require_relative "backends/cpu"
+
 require_relative "ops/add"
 require_relative "ops/sub"
 require_relative "ops/mul"
@@ -17,9 +20,12 @@ module Maurograd
   # Tensor is the core data structure of Maurograd.
   #
   # A Tensor wraps:
-  # - `data`: the actual numeric values (Numo::NArray)
-  # - `grad`: the accumulated gradient dL/d(data) (Numo::NArray, lazily allocated)
+  # - `data`: the actual numeric values, as a native array of its backend
+  #   (a Numo::NArray on the default CPU backend)
+  # - `grad`: the accumulated gradient dL/d(data) (same array type, lazily allocated)
   # - `creator`: the Op (operation) that created this tensor in the computation graph
+  # - `backend`: where `data` lives and which code runs the math (see
+  #   Maurograd::Backends)
   #
   # This mirrors the design of modern autograd frameworks:
   # - Operations (Ops) build a directed acyclic graph (DAG) of tensors.
@@ -28,22 +34,26 @@ module Maurograd
   #
   class Tensor
     attr_accessor :data, :grad, :creator
-    attr_reader :requires_grad, :device
+    attr_reader :requires_grad, :backend
 
     # Create a new Tensor.
     #
     # Params:
-    # - data: numeric data (Ruby array, scalar, or Numo::NArray). Converted to Numo::SFloat.
+    # - data: numeric data (Ruby array, scalar, Numo::NArray, or a native
+    #   array of any backend). Converted to a native array of `backend`.
     # - requires_grad: if true, this tensor participates in autograd (gradients are tracked)
-    # - device: placeholder for future CPU/GPU support (currently only :cpu)
+    # - backend: backend name (e.g. :cpu, :mlx) or object; defaults to
+    #   Maurograd.backend
     #
     # Notes on dtype:
     # - We default to Numo::SFloat (float32). This is the common choice in neural networks:
     #   it is faster and uses less memory than float64, with sufficient precision in practice.
     #
-    def initialize(data, requires_grad: false, device: :cpu)
-      # Ensure @data is a Numo::NArray (float32).
-      @data = data.is_a?(Numo::NArray) ? data : Numo::SFloat.cast(data)
+    def initialize(data, requires_grad: false, backend: nil)
+      @backend = backend ? Backends.fetch(backend) : Maurograd.backend
+
+      # Ensure @data is a native array of our backend (float32 by default).
+      @data = Tensor.to_native(data, @backend)
 
       # If false, backward() becomes a no-op and gradients are not stored.
       @requires_grad = requires_grad
@@ -53,14 +63,37 @@ module Maurograd
       # Note: leaf tensors (parameters) have creator=nil
       @creator = nil
 
-      # Gradient buffer (Numo::NArray), allocated lazily.
+      # Gradient buffer (native array), allocated lazily.
       # Many tensors in a network never need to store gradients (e.g., inference),
       # so allocating eagerly would waste memory.
       @grad = nil
+    end
 
-      # Device support placeholder.
-      # In the future this could dispatch to CUDA arrays or other backends.
-      @device = device
+    # Converts `x` (host data, a Tensor, or a native array of any backend)
+    # into a native array of `backend`, copying only when needed.
+    def self.to_native(x, backend)
+      x = x.data if x.is_a?(Tensor)
+      return x if backend.native?(x)
+
+      # A native array of another backend: go through host memory.
+      x = x.to_numo if x.respond_to?(:to_numo) && !x.is_a?(Numo::NArray)
+      backend.from(x)
+    end
+
+    # Name of the backend (kept for compatibility with the old `device`
+    # placeholder).
+    def device
+      @backend.name
+    end
+
+    # Copy of the data in host memory, as a Numo array.
+    def to_numo
+      @backend.to_numo(@data)
+    end
+
+    # The value of a one-element tensor (e.g. a loss), as a Ruby Float.
+    def item
+      @backend.item(@data)
     end
 
     # Convenience accessors.
@@ -69,11 +102,11 @@ module Maurograd
     end
 
     def ndim
-      @data.ndim
+      shape.length
     end
 
     def size
-      @data.size
+      shape.reduce(1, :*)
     end
 
     # Start backpropagation from this tensor.
@@ -116,13 +149,9 @@ module Maurograd
       # For a scalar loss L, dL/dL = 1, so backward() can be called without arguments.
       # For non-scalars, the caller must explicitly provide a gradient of matching shape.
       if gradient.nil?
-        raise "Gradient can be omitted only for scalar tensors" if @data.size > 1
-        gradient = Numo::SFloat.ones(*@data.shape)
+        raise "Gradient can be omitted only for scalar tensors" if size > 1
+        gradient = @backend.ones(shape)
       end
-
-      # Ensure gradients are raw Numo arrays (not Tensors).
-      # (Your Ops generally pass Numo arrays already, but this keeps the API consistent.)
-      gradient = gradient.data if gradient.is_a?(Tensor)
 
       # 2) Accumulate gradient into this tensor.
       accumulate_grad(gradient)
@@ -168,8 +197,9 @@ module Maurograd
     def accumulate_grad(gradient)
       return unless @requires_grad
 
-      # Ensure gradients are raw Numo arrays (not Tensors).
-      gradient = gradient.data if gradient.is_a?(Tensor)
+      # Ensure gradients are native arrays of our backend (not Tensors, not
+      # host arrays passed in by a caller).
+      gradient = Tensor.to_native(gradient, @backend)
 
       @grad = @grad ? (@grad + gradient) : gradient
     end
@@ -180,7 +210,7 @@ module Maurograd
     # - We allocate a new zero array of the same shape as data.
     # - For memory/performance, some frameworks reuse buffers; here we keep it simple.
     def zero_grad
-      @grad = Numo::SFloat.zeros(*@data.shape) if @requires_grad
+      @grad = @backend.zeros(shape) if @requires_grad
     end
 
     # --- Basic Ops (syntactic sugar) -----------------------------------------
@@ -192,17 +222,17 @@ module Maurograd
     # In Ruby we must explicitly wrap scalars/arrays into Tensor objects.
 
     def +(other)
-      other = Tensor.new(other) unless other.is_a?(Tensor)
+      other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
       Ops::Add.apply(self, other)
     end
 
     def matmul(other)
-      other = Tensor.new(other) unless other.is_a?(Tensor)
+      other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
       Ops::MatMul.apply(self, other)
     end
 
     def conv2d(other)
-      other = Tensor.new(other) unless other.is_a?(Tensor)
+      other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
       Ops::Conv2D.apply(self, other)
     end
 
@@ -215,18 +245,18 @@ module Maurograd
     end
 
     def -(other)
-      other = Tensor.new(other) unless other.is_a?(Tensor)
+      other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
       Ops::Sub.apply(self, other)
     end
 
     def *(other)
-      other = Tensor.new(other) unless other.is_a?(Tensor)
+      other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
       Ops::Mul.apply(self, other)
     end
 
     def linear(weight, bias = nil)
-      weight = Tensor.new(weight) unless weight.is_a?(Tensor)
-      bias = Tensor.new(bias) if bias && !bias.is_a?(Tensor)
+      weight = Tensor.new(weight, backend: @backend) unless weight.is_a?(Tensor)
+      bias = Tensor.new(bias, backend: @backend) if bias && !bias.is_a?(Tensor)
       Ops::Linear.apply(self, weight, bias)
     end
 
@@ -243,13 +273,17 @@ module Maurograd
       Ops::MaxPool2D.apply(self, kh, kw, stride, padding)
     end
 
-    # Move tensor to a different device (future work).
-    #
-    # Today Maurograd runs only on CPU with Numo.
-    # This method exists to keep the API forward-compatible with GPU support.
-    def to(device)
-      return self if @device == device
-      @device = device
+    # Moves this tensor (data and gradient) to another backend, in place,
+    # and returns self. In place, so that everything holding this Tensor
+    # (layers, optimizers) keeps working with it. Meant for leaf tensors
+    # such as parameters, not for tensors in the middle of a graph.
+    def to(backend)
+      target = Backends.fetch(backend)
+      return self if target.equal?(@backend)
+
+      @data = target.from(@backend.to_numo(@data))
+      @grad = target.from(@backend.to_numo(@grad)) if @grad
+      @backend = target
       self
     end
 
@@ -267,9 +301,9 @@ module Maurograd
     #
     # Therefore this method swaps only two axes (default: the last two).
     def transpose(ax0 = -2, ax1 = -1)
-      axes = (0...@data.ndim).to_a
+      axes = (0...ndim).to_a
       axes[ax0], axes[ax1] = axes[ax1], axes[ax0]
-      Tensor.new(@data.transpose(*axes), requires_grad: @requires_grad)
+      Tensor.new(@backend.transpose(@data, *axes), requires_grad: @requires_grad, backend: @backend)
     end
 
     # Permute tensor axes arbitrarily.
@@ -282,7 +316,7 @@ module Maurograd
     # - This returns a new Tensor that shares the underlying data view semantics of Numo.
     # - If you later need contiguous memory, you may need an explicit copy (future feature).
     def permute(*axes)
-      Tensor.new(@data.transpose(*axes), requires_grad: @requires_grad)
+      Tensor.new(@backend.transpose(@data, *axes), requires_grad: @requires_grad, backend: @backend)
     end
   end
 end

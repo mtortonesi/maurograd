@@ -48,6 +48,7 @@ module Maurograd
 
       def forward
         input, weight, bias = @inputs
+        @backend = bk = Ops.backend_of(*@inputs)
 
         x = input.data
         w = weight.data
@@ -63,16 +64,16 @@ module Maurograd
         raise "Linear: input last dim #{in_dim} must match weight In #{w.shape[1]}" if in_dim != w.shape[1]
 
         # Y = X @ W^T
-        y = x.dot(w.transpose(1, 0)) # [N, Out]
+        y = bk.matmul(x, bk.transpose(w, 1, 0)) # [N, Out]
 
         # Add bias (broadcast over batch).
         if bias
           # bias can be [Out] or [1, Out]; reshape to [1, Out] then broadcast over N.
-          y.inplace + bias.data.reshape(1, w.shape[0])
+          y += bk.reshape(bias.data, 1, w.shape[0])
         end
 
         requires_grad = @inputs.any?(&:requires_grad)
-        out = Tensor.new(y, requires_grad: requires_grad)
+        out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -82,23 +83,24 @@ module Maurograd
 
         input, weight, bias = @inputs
         dy = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
+        bk = @backend
         # dy: [N, Out]
 
         # A) Bias gradient: db = sum over batch axis -> [Out]
         if bias&.requires_grad
-          db = dy.sum(axis: 0) # [Out]
-          bias.accumulate_grad(db.copy.reshape(*bias.shape))
+          db = bk.sum(dy, axis: 0) # [Out]
+          bias.accumulate_grad(bk.reshape(db, *bias.shape))
         end
 
         # B) Weight gradient: dw = dy^T @ X  -> [Out, In]
         if weight.requires_grad
-          dw = dy.transpose(1, 0).dot(@x) # [Out, In]
+          dw = bk.matmul(bk.transpose(dy, 1, 0), @x) # [Out, In]
           weight.accumulate_grad(dw)
         end
 
         # C) Input gradient: dx = dy @ W -> [N, In]
         if input.requires_grad
-          dx = dy.dot(@w) # [N, In]
+          dx = bk.matmul(dy, @w) # [N, In]
           input.accumulate_grad(dx)
         end
       end

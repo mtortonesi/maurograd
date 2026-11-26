@@ -26,6 +26,11 @@ module Maurograd
   # RNG at load time, so unseeded weight init is genuinely random).
   require_relative "maurograd/seed"
 
+  # Compute backends (where tensor data lives): the CPU one is always
+  # loaded; optional ones (MLX) load on first use.
+  require_relative "maurograd/backends"
+  require_relative "maurograd/backends/cpu"
+
   # Core tensor type (autograd graph node).
   require_relative "maurograd/tensor"
 

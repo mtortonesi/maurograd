@@ -15,11 +15,12 @@ module Maurograd
 
       def forward
         a, b = @inputs
+        @backend = Ops.backend_of(a, b)
         result_data = a.data + b.data
 
         requires_grad = a.requires_grad || b.requires_grad
 
-        result = Tensor.new(result_data, requires_grad: requires_grad)
+        result = Tensor.new(result_data, requires_grad: requires_grad, backend: @inputs.first.backend)
         result.creator = self if requires_grad
         result
       end
@@ -39,13 +40,13 @@ module Maurograd
         if a.requires_grad
           # The derivative of a + b w.r.t. a is 1.
           # The gradient is simply grad_output, but we must handle broadcasting.
-          grad_a = Utils.unbroadcast(grad_output, a.shape)
+          grad_a = Utils.unbroadcast(grad_output, a.shape, @backend)
           a.accumulate_grad(grad_a)
         end
 
         if b.requires_grad
           # The derivative of a + b w.r.t. b is 1.
-          grad_b = Utils.unbroadcast(grad_output, b.shape)
+          grad_b = Utils.unbroadcast(grad_output, b.shape, @backend)
           b.accumulate_grad(grad_b)
         end
       end

@@ -17,10 +17,10 @@ module Maurograd
 
         # The result of the sum is a single scalar value containing
         # the sum of all elements.
-        result_data = tensor.data.sum
+        result_data = tensor.backend.sum(tensor.data)
 
         requires_grad = tensor.requires_grad
-        result = Tensor.new(result_data, requires_grad: requires_grad)
+        result = Tensor.new(result_data, requires_grad: requires_grad, backend: @inputs.first.backend)
 
         result.creator = self if requires_grad
         result
@@ -36,7 +36,7 @@ module Maurograd
         # grad_output is a scalar. We use Numo::SFloat.cast to make sure
         # grad_output is handled correctly, then multiply it by an array
         # of ones with the same shape as the input.
-        ones = Numo::SFloat.ones(*tensor.data.shape)
+        ones = tensor.backend.ones(tensor.shape)
         grad_input = grad_output * ones
 
         tensor.accumulate_grad(grad_input)

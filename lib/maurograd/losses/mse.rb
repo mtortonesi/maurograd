@@ -41,10 +41,10 @@ module Maurograd
 
         # Mean squared error (scalar).
         @n_elems = @diff.size
-        loss_data = (@diff**2).sum / @n_elems.to_f
+        loss_data = pred.backend.sum(@diff**2) / @n_elems.to_f
 
         requires_grad = pred.requires_grad || target.requires_grad
-        out = Tensor.new(loss_data, requires_grad: requires_grad)
+        out = Tensor.new(loss_data, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -54,7 +54,6 @@ module Maurograd
 
         # grad_output is dL/d(out). For a scalar loss it is usually 1.0.
         gout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        gout = Numo::SFloat.cast(gout)
 
         # Scale factor: (2/N) * grad_output
         scale = (2.0 / @n_elems.to_f) * gout

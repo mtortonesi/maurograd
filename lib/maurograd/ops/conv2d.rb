@@ -67,41 +67,19 @@ module Maurograd
         @stride = stride
         @padding = padding
 
-        @workspace = {}
+        @ctx = nil # backend-specific state saved by forward for backward
       end
 
       def forward
         input, weight, bias = @inputs
+        @backend = Ops.backend_of(*@inputs)
 
-        x_data = if input.data.contiguous?
-          input.data
-        else
-          input.data.copy
-        end
-
-        w_data = if weight.data.contiguous?
-          weight.data
-        else
-          weight.data.copy
-        end
-
-        b_data = if bias.nil?
-          nil
-        elsif bias.data.contiguous?
-          bias.data
-        else
-          bias.data.copy
-        end
-
-        out_data = Maurograd::Ext.conv2d_forward(x_data, w_data, b_data, @stride, @padding, @workspace)
+        out_data, @ctx = @backend.conv2d_forward(input.data, weight.data, bias&.data, @stride, @padding)
 
         requires_grad = @inputs.any?(&:requires_grad)
-        if requires_grad
-          @x_shape = input.data.shape
-          @w_shape = weight.data.shape
-        end
+        @ctx = nil unless requires_grad
 
-        out = Tensor.new(out_data, requires_grad: requires_grad)
+        out = Tensor.new(out_data, requires_grad: requires_grad, backend: @backend)
         out.creator = self if requires_grad
         out
       end
@@ -111,54 +89,33 @@ module Maurograd
 
         go = grad_output.is_a?(Maurograd::Tensor) ? grad_output.data : grad_output
 
-        x_data = if input.data.contiguous?
-          input.data
-        else
-          input.data.copy
-        end
+        want_dx = input.requires_grad
+        want_dw = weight.requires_grad
+        want_db = bias&.requires_grad || false
 
-        w_data = if weight.data.contiguous?
-          weight.data
-        else
-          weight.data.copy
-        end
+        dx, dw, db = @backend.conv2d_backward(@ctx, go, want_dx: want_dx, want_dw: want_dw, want_db: want_db)
 
-        unless go.contiguous?
-          go = go.copy
-        end
-
-        want_dx = input.requires_grad ? 1 : 0
-        want_dw = weight.requires_grad ? 1 : 0
-        want_db = bias&.requires_grad ? 1 : 0
-
-        dx, dw, db = Maurograd::Ext.conv2d_backward(
-          x_data, w_data, go,
-          @stride, @padding,
-          want_dx, want_dw, want_db,
-          @workspace
-        )
-
-        if bias&.grad && bias.grad.shape != db.shape
+        if db && bias.grad && bias.grad.shape != db.shape
           raise "db shape mismatch: grad=#{bias.grad.shape} db=#{db.shape}"
         end
 
-        if weight.grad && weight.grad.shape != dw.shape
+        if dw && weight.grad && weight.grad.shape != dw.shape
           raise "dw shape mismatch: grad=#{weight.grad.shape} dw=#{dw.shape}"
         end
 
-        if input.grad && input.grad.shape != dx.shape
+        if dx && input.grad && input.grad.shape != dx.shape
           raise "dx shape mismatch: grad=#{input.grad.shape} dx=#{dx.shape}"
         end
 
-        if want_db == 1
+        if want_db
           bias.accumulate_grad(db)
         end
 
-        if want_dw == 1
+        if want_dw
           weight.accumulate_grad(dw)
         end
 
-        if want_dx == 1
+        if want_dx
           input.accumulate_grad(dx)
         end
       end

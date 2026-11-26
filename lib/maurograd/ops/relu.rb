@@ -9,9 +9,10 @@ module Maurograd
     # Backward:
     #   dy/dx = 1 if x > 0 else 0
     #
-    # Both passes run in the C extension. Backward only needs to know where
-    # x was positive, and that is exactly where y is positive, so we cache
-    # the output y instead of a separate mask.
+    # Both passes are backend kernels (on the CPU backend, C functions in
+    # maurograd_ext). Backward only needs to know where x was positive,
+    # which is exactly where y is positive, so the CPU kernel caches the
+    # output y instead of a separate mask.
     class ReLU
       def self.apply(input)
         new(input).forward
@@ -21,17 +22,17 @@ module Maurograd
 
       def initialize(input)
         @inputs = [input]
-        @y = nil
+        @ctx = nil
       end
 
       def forward
         input = @inputs.first
-        y = Maurograd::Ext.relu_forward(Utils.sfloat_contiguous(input.data))
+        y, ctx = input.backend.relu_forward(input.data)
 
         requires_grad = input.requires_grad
-        @y = y if requires_grad
+        @ctx = ctx if requires_grad
 
-        out = Tensor.new(y, requires_grad: requires_grad)
+        out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
       end
@@ -40,7 +41,8 @@ module Maurograd
         input = @inputs.first
         return unless input.requires_grad
 
-        dx = Maurograd::Ext.relu_backward(Utils.sfloat_contiguous(grad_output), @y)
+        dout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
+        dx = input.backend.relu_backward(@ctx, dout)
         input.accumulate_grad(dx)
       end
     end

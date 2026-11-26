@@ -1,6 +1,5 @@
 require_relative "../tensor"
 require_relative "../utils/utils"
-require "numo/narray"
 
 module Maurograd
   module Losses
@@ -47,14 +46,15 @@ module Maurograd
 
         Maurograd::Utils.assert_finite!(x, where: "CEWithLogits forward: logits")
 
-        raise "CrossEntropyWithLogits expects logits [N,C], got #{x.shape.inspect}" unless x.ndim == 2
+        raise "CrossEntropyWithLogits expects logits [N,C], got #{x.shape.inspect}" unless x.shape.length == 2
         @n, @c = x.shape
+        bk = @backend = Ops.backend_of(logits, target)
 
         # Determine target format
-        if t.ndim == 1
+        if t.shape.length == 1
           raise "Target [N] must match logits N=#{@n}, got #{t.shape.inspect}" unless t.shape[0] == @n
           @is_indices = true
-        elsif t.ndim == 2
+        elsif t.shape.length == 2
           raise "Target [N,C] must match logits [#{@n},#{@c}], got #{t.shape.inspect}" unless t.shape == [@n, @c]
           @is_indices = false
         else
@@ -63,13 +63,13 @@ module Maurograd
 
         # log-sum-exp trick (row-wise)
         # shift = max per row (keepdims)
-        shift = x.max(axis: 1, keepdims: true)               # [N,1]
+        shift = bk.max(x, axis: 1, keepdims: true)           # [N,1]
         Maurograd::Utils.assert_finite!(shift, where: "CEWithLogits forward: shift")
 
-        exps = Numo::NMath.exp(x - shift)                   # [N,C]
+        exps = bk.exp(x - shift)                             # [N,C]
         Maurograd::Utils.assert_finite!(exps, where: "CEWithLogits forward: exps")
 
-        sumexp = exps.sum(axis: 1, keepdims: true)           # [N,1]
+        sumexp = bk.sum(exps, axis: 1, keepdims: true)       # [N,1]
         Maurograd::Utils.assert_finite!(sumexp, where: "CEWithLogits forward: sumexp")
 
         # softmax cached for backward
@@ -77,30 +77,19 @@ module Maurograd
         Maurograd::Utils.assert_finite!(@softmax, where: "CEWithLogits forward: softmax")
 
         # log_probs = x - shift - log(sumexp)
-        logsumexp = shift + Numo::NMath.log(sumexp)          # [N,1]
+        logsumexp = shift + bk.log(sumexp)                   # [N,1]
         log_probs = x - logsumexp                            # [N,C]
 
-        loss_data =
-          if @is_indices
-            # gather -log_probs[n, y_n]
-            ys = t.to_a.map(&:to_i)
-            acc = 0.0
-            ys.each_with_index do |yy, i|
-              raise "Class index out of range: #{yy} for C=#{@c}" if yy < 0 || yy >= @c
-              acc += -log_probs[i, yy]
-            end
-            acc / @n.to_f
-          else
-            # one-hot / distribution: -mean(sum(target * log_probs, axis=1))
-            # Here t can be one-hot or probability distribution.
-            per_row = (t * log_probs).sum(axis: 1)           # [N]
-            -(per_row.sum / @n.to_f)
-          end
-
-        @target = t
+        # Class indices are turned into one-hot rows, so both target formats
+        # share the same vectorized formula: -mean(sum(target * log_probs, axis=1)).
+        # (Selecting -log_probs[n, y_n] with a one-hot mask is the same
+        # "gather", without a per-sample Ruby loop.) Soft targets can be any
+        # probability distribution.
+        @target = @is_indices ? bk.one_hot(t, @c) : t # [N,C]
+        loss_data = -bk.sum(@target * log_probs) / @n.to_f
 
         requires_grad = logits.requires_grad || target.requires_grad
-        out = Tensor.new(loss_data, requires_grad: requires_grad)
+        out = Tensor.new(loss_data, requires_grad: requires_grad, backend: bk)
         out.creator = self if requires_grad
         out
       end
@@ -111,22 +100,10 @@ module Maurograd
         logits, target = @inputs
 
         gout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        gout = Numo::SFloat.cast(gout)
 
         # dL/dlogits = (softmax - target_one_hot) / N
         if logits.requires_grad
-          dx = @softmax.dup
-
-          if @is_indices
-            ys = @target.to_a.map(&:to_i)
-            ys.each_with_index do |yy, i|
-              dx[i, yy] -= 1.0
-            end
-          else
-            dx -= @target
-          end
-
-          dx *= (gout / @n.to_f)
+          dx = (@softmax - @target) * (gout / @n.to_f)
 
           Maurograd::Utils.assert_finite!(dx, where: "CEWithLogits backward: dx")
 
@@ -142,7 +119,7 @@ module Maurograd
           # Recompute log_probs cheaply from softmax:
           # log_probs = log(softmax)  (still stable enough since softmax in (0,1))
           # but we used stable logsumexp forward; keeping it simple here:
-          log_probs = Numo::NMath.log(@softmax)
+          log_probs = @backend.log(@softmax)
           dt = -(log_probs * (gout / @n.to_f))
           target.accumulate_grad(dt)
         end

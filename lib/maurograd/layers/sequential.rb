@@ -24,6 +24,13 @@ module Maurograd
         end
       end
 
+      # Moves every layer's state (parameters, running statistics) to
+      # another backend, e.g. model.to(:mlx).
+      def to(backend)
+        @layers.each { |l| l.to(backend) if l.respond_to?(:to) }
+        self
+      end
+
       def train
         @layers.each { |l| l.train if l.respond_to?(:train) }
         self
