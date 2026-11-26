@@ -17,7 +17,7 @@ group :examples do
 end
 
 group :bench do
-  gem "torch-rb", "~> 0.23.1"
+  gem "torch-rb", "~> 0.27.0"
 end
 
 group :development do
