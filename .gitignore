@@ -55,3 +55,13 @@ Gemfile.lock
 # Used by RuboCop. Remote config files pulled in from inherit_from directive.
 # .rubocop-https?--*
 ext/maurograd_ext/Makefile
+ext/maurograd_ext/maurograd_ext.bundle
+ext/maurograd_ext/maurograd_ext.bundle.dSYM/
+ext/maurograd_ext/maurograd_ext.o
+ext/maurograd_ext/mkmf.log
+
+# Downloaded datasets (e.g. MNIST cache used by the examples).
+/data/
+
+# Profiler output.
+stackprof*.dump
