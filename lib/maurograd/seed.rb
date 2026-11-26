@@ -17,6 +17,8 @@ module Maurograd
   # - Weight initialization in any layer constructed without its own
   #   explicit seed: (Layers::Conv2D, Layers::Linear) - they fall back to
   #   Numo::NArray's global RNG, which this reseeds.
+  # - Dropout masks (Ops::Dropout / Layers::Dropout), drawn from that same
+  #   global Numo RNG.
   # - Ruby's own Kernel#rand, in case other code relies on it.
   #
   # Does NOT affect Datasets::Batching.batches, which already has its own
