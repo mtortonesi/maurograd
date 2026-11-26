@@ -61,6 +61,26 @@ static inline int sz_to_int(size_t v, const char *name)
     return (int)v;
 }
 
+/* The kernels read raw float32 memory in row-major order, so every array
+ * they read must be a contiguous Numo::SFloat: a strided view (a slice, a
+ * transpose) would be read as if it were contiguous, giving wrong values or
+ * reading past the end of its buffer. */
+static void check_sfloat_contiguous(VALUE v, const char *name)
+{
+    if (!rb_obj_is_kind_of(v, cSFloat_)) rb_raise(rb_eTypeError, "%s must be Numo::SFloat", name);
+    if (!RTEST(na_check_contiguous(v))) rb_raise(rb_eArgError, "%s must be contiguous", name);
+}
+
+/* Sliding-window parameters shared by conv and im2col/col2im. stride 0 would
+ * divide by zero when computing the output size: a crash on x86, and silently
+ * wrong shapes on ARM, where integer division by zero returns 0. */
+static void check_window_params(int kh, int kw, int stride, int pad)
+{
+    if (kh <= 0 || kw <= 0) rb_raise(rb_eArgError, "kernel size must be positive, got %dx%d", kh, kw);
+    if (stride <= 0) rb_raise(rb_eArgError, "stride must be positive, got %d", stride);
+    if (pad < 0) rb_raise(rb_eArgError, "padding must be >= 0, got %d", pad);
+}
+
 /* ---------- reusable GEMM (row-major) ---------- */
 
 static inline void sgemm_rowmajor_nt(int M, int N, int K,
@@ -257,6 +277,9 @@ static VALUE mg_conv2d_forward(VALUE self,
     if (!rb_obj_is_kind_of(vx, cSFloat_)) rb_raise(rb_eArgError, "x must be Numo::SFloat");
     if (!rb_obj_is_kind_of(vw, cSFloat_)) rb_raise(rb_eArgError, "w must be Numo::SFloat");
     if (vbias != Qnil && !rb_obj_is_kind_of(vbias, cSFloat_)) rb_raise(rb_eArgError, "bias must be Numo::SFloat or nil");
+    check_sfloat_contiguous(vx, "x");
+    check_sfloat_contiguous(vw, "w");
+    if (vbias != Qnil) check_sfloat_contiguous(vbias, "bias");
 
     narray_t *nx, *nw;
     GetNArray(vx, nx);
@@ -281,6 +304,7 @@ static VALUE mg_conv2d_forward(VALUE self,
     const int Kw   = sz_to_int(nw->shape[3], "Kw");
 
     if (Cin != C) rb_raise(rb_eArgError, "channel mismatch: x.C=%d, w.Cin=%d", C, Cin);
+    check_window_params(Kh, Kw, stride, pad);
 
     if (vbias != Qnil) {
         narray_t *nb;
@@ -527,6 +551,9 @@ static VALUE mg_conv2d_backward(VALUE self, VALUE vx, VALUE vw, VALUE vdout,
         rb_raise(rb_eTypeError, "w must be Numo::SFloat");
     if (!rb_obj_is_kind_of(vdout, cNArray_) || !rb_obj_is_kind_of(vdout, cSFloat_))
         rb_raise(rb_eTypeError, "dout must be Numo::SFloat");
+    check_sfloat_contiguous(vx, "x");
+    check_sfloat_contiguous(vw, "w");
+    check_sfloat_contiguous(vdout, "dout");
 
     narray_t *nx, *nw, *ndout;
     GetNArray(vx, nx);
@@ -564,6 +591,7 @@ static VALUE mg_conv2d_backward(VALUE self, VALUE vx, VALUE vw, VALUE vdout,
 
     if (dN != N)       rb_raise(rb_eArgError, "dout N mismatch: %d vs %d", dN, N);
     if (dCout != Cout) rb_raise(rb_eArgError, "dout Cout mismatch: %d vs %d", dCout, Cout);
+    check_window_params(Kh, Kw, stride, pad);
 
     // expected OH/OW sanity
     const int exp_OH = (H + 2*pad - Kh) / stride + 1;
@@ -724,15 +752,13 @@ static VALUE mg_conv2d_backward(VALUE self, VALUE vx, VALUE vw, VALUE vdout,
 
 static VALUE mg_im2col(VALUE self, VALUE vx, VALUE vkh, VALUE vkw, VALUE vstride, VALUE vpad)
 {
+    check_sfloat_contiguous(vx, "x");
     narray_t *nx;
     GetNArray(vx, nx);
 
-    if (!rb_obj_is_kind_of(vx, cSFloat_)) {
-        rb_raise(rb_eTypeError, "im2col supports only Numo::SFloat");
-    }
-
     int kh = NUM2INT(vkh), kw = NUM2INT(vkw);
     int stride = NUM2INT(vstride), pad = NUM2INT(vpad);
+    check_window_params(kh, kw, stride, pad);
 
     if (nx->ndim != 4) rb_raise(rb_eArgError, "x must be 4D (NCHW)");
 
@@ -745,8 +771,8 @@ static VALUE mg_im2col(VALUE self, VALUE vx, VALUE vkh, VALUE vkw, VALUE vstride
     int OW = (W + 2*pad - kw) / stride + 1;
     if (OH <= 0 || OW <= 0) rb_raise(rb_eArgError, "invalid output shape");
 
-    int rows = N * OH * OW;
-    int cols = C * kh * kw;
+    int rows = sz_to_int((size_t)N * (size_t)OH * (size_t)OW, "rows");
+    int cols = sz_to_int((size_t)C * (size_t)kh * (size_t)kw, "cols");
 
     size_t out_shape[2] = { (size_t)rows, (size_t)cols };
     VALUE vout = nary_new(cSFloat_, 2, out_shape);
@@ -771,23 +797,40 @@ static VALUE mg_col2im(VALUE self,
                        VALUE vstride,
                        VALUE vpad)
 {
-    if (!rb_obj_is_kind_of(vdcol, cSFloat_)) {
-        rb_raise(rb_eTypeError, "col2im supports only Numo::SFloat");
-    }
+    check_sfloat_contiguous(vdcol, "dcol");
 
     int Kh = NUM2INT(vkh);
     int Kw = NUM2INT(vkw);
     int stride = NUM2INT(vstride);
     int pad = NUM2INT(vpad);
+    check_window_params(Kh, Kw, stride, pad);
 
-    int N = sz_to_int(NUM2SIZET(rb_ary_entry(vxshape, 0)), "N");
-    int C = sz_to_int(NUM2SIZET(rb_ary_entry(vxshape, 1)), "C");
-    int H = sz_to_int(NUM2SIZET(rb_ary_entry(vxshape, 2)), "H");
-    int W = sz_to_int(NUM2SIZET(rb_ary_entry(vxshape, 3)), "W");
+    Check_Type(vxshape, T_ARRAY);
+    if (RARRAY_LEN(vxshape) != 4) rb_raise(rb_eArgError, "x_shape must be [N, C, H, W]");
+    int dims[4];
+    for (int i = 0; i < 4; i++) {
+        long d = NUM2LONG(rb_ary_entry(vxshape, i));
+        if (d <= 0) rb_raise(rb_eArgError, "x_shape entries must be positive");
+        dims[i] = sz_to_int((size_t)d, "x_shape entry");
+    }
+    int N = dims[0], C = dims[1], H = dims[2], W = dims[3];
 
     int OH = (H + 2*pad - Kh) / stride + 1;
     int OW = (W + 2*pad - Kw) / stride + 1;
     if (OH <= 0 || OW <= 0) rb_raise(rb_eArgError, "invalid output shape");
+
+    /* dcol must be exactly the [N*OH*OW, C*Kh*Kw] matrix im2col would
+     * produce for this shape: col2im_f32 reads that many floats from it. */
+    size_t rows = (size_t)N * (size_t)OH * (size_t)OW;
+    size_t cols = (size_t)C * (size_t)Kh * (size_t)Kw;
+    sz_to_int(rows, "rows");
+    sz_to_int(cols, "cols");
+    narray_t *ndc;
+    GetNArray(vdcol, ndc);
+    if (ndc->ndim != 2 || ndc->shape[0] != rows || ndc->shape[1] != cols) {
+        rb_raise(rb_eArgError, "dcol must have shape [%zu, %zu] for x_shape [%d, %d, %d, %d]",
+                 rows, cols, N, C, H, W);
+    }
 
     size_t out_shape[4] = { (size_t)N, (size_t)C, (size_t)H, (size_t)W };
     VALUE vdx = nary_new(cSFloat_, 4, out_shape);
@@ -933,12 +976,6 @@ static VALUE mg_maxpool2d_backward(VALUE self, VALUE vdout, VALUE vidx, VALUE vi
 }
 
 /* ---------- Maurograd::Ext.relu_forward / relu_backward ---------- */
-
-static void check_sfloat_contiguous(VALUE v, const char *name)
-{
-    if (!rb_obj_is_kind_of(v, cSFloat_)) rb_raise(rb_eTypeError, "%s must be Numo::SFloat", name);
-    if (!RTEST(na_check_contiguous(v))) rb_raise(rb_eArgError, "%s must be contiguous", name);
-}
 
 static VALUE sfloat_new_like(VALUE v)
 {
