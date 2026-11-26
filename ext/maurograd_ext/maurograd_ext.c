@@ -8,7 +8,13 @@
 #include <string.h>
 #include <limits.h>
 
+#ifdef MAUROGRAD_USE_ACCELERATE
+#include <Accelerate/Accelerate.h>  // Apple Accelerate (cblas_*)
+#define MAUROGRAD_BLAS_NAME "accelerate"
+#else
 #include <cblas.h>   // OpenBLAS (cblas_*)
+#define MAUROGRAD_BLAS_NAME "openblas"
+#endif
 
 /*
  * Minimal helpers: type checks and pointer access.
@@ -820,6 +826,9 @@ void Init_maurograd_ext(void)
 
     mMaurograd = rb_define_module("Maurograd");
     mExt = rb_define_module_under(mMaurograd, "Ext");
+
+    /* Which BLAS this build links against ("accelerate" or "openblas"). */
+    rb_define_const(mExt, "BLAS", rb_str_freeze(rb_str_new_cstr(MAUROGRAD_BLAS_NAME)));
 
     rb_define_singleton_method(mExt, "conv2d_forward", mg_conv2d_forward, 6);
     rb_define_singleton_method(mExt, "conv2d_backward", mg_conv2d_backward, 9);
