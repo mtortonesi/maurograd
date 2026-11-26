@@ -11,9 +11,14 @@ describe "MLX backend" do
     false
   end
 
-  def before
-    super
-    skip "MLX backend not available" unless mlx_available?
+  # Skip every test here where the MLX backend can't be loaded (e.g. on CI,
+  # which has no mlx-c). Done in `around`, not `before`: sus runs `before`
+  # outside the catch(:skip) that wraps the test body, so calling skip there
+  # escapes as an UncaughtThrowError.
+  def around(&block)
+    return super if mlx_available?
+
+    @__assertions__.skip("MLX backend not available")
   end
 
   # Largest absolute difference relative to the reference's magnitude.
