@@ -12,7 +12,8 @@ up with a relatively clean mostly-Ruby codebase that leverages
 [numo-narray-alt](https://github.com/yoshoku/numo-narray-alt) as a tensor
 framwork and implements 2D convolution in C using the im2col + GEMM + col2im
 approach. For simplicity, GEMM is performed with
-[OpenBLAS](https://github.com/OpenMathLib/OpenBLAS). (In general, I hate the
+[OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) (or Apple's Accelerate
+framework on macOS). (In general, I hate the
 idea of developing C extensions for Ruby, but they are perfect for this task.)
 
 The original scalar-valued micrograd clone this project started as now lives
@@ -38,6 +39,33 @@ framework:
 (An MLP classifier for the two moons dataset also exists, but it's built on
 the scalar-valued engine, so it now lives in
 [maurograd_scalar](https://github.com/mtortonesi/maurograd_scalar) instead.)
+
+
+## Backends
+
+The autograd engine is the same everywhere, but tensor storage and the math
+run on a pluggable *backend* (`lib/maurograd/backends/`):
+
+- `:cpu` (default): Numo arrays, plus the C kernels in `ext/maurograd_ext`.
+  The C extension links Accelerate on macOS and OpenBLAS elsewhere; set
+  `MAUROGRAD_BLAS=openblas` (or `accelerate`) when building to choose.
+- `:mlx`: [MLX](https://github.com/ml-explore/mlx) arrays, running on the
+  Apple Silicon GPU, through the optional `ext/maurograd_mlx` bindings for
+  [mlx-c](https://github.com/ml-explore/mlx-c) (`brew install mlx-c`, then
+  `./bin/build_ext`; the extension is skipped when mlx-c is missing).
+
+Pick one for a whole script with `MAUROGRAD_BACKEND=mlx`, or in code with
+`Maurograd.backend = :mlx` (before building the model) or `model.to(:mlx)`.
+`tensor.item` and `tensor.to_numo` read values back on any backend.
+
+Two runtime defaults worth knowing about:
+
+- BLAS/OpenMP thread pools default to a single thread
+  (`OPENBLAS_NUM_THREADS`/`OMP_NUM_THREADS`, unless you set them): the
+  process loads two OpenBLAS copies (ours and numo-linalg-alt's), whose
+  thread pools otherwise starve each other.
+- The MLX backend runs float32 matrix products at full precision
+  (`MLX_ENABLE_TF32=0`, unless you set it), like the CPU backend.
 
 
 
