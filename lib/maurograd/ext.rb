@@ -31,6 +31,8 @@ end
 unless defined?(Maurograd::Ext) &&
     Maurograd::Ext.respond_to?(:conv2d_forward) &&
     Maurograd::Ext.respond_to?(:im2col) &&
-    Maurograd::Ext.respond_to?(:col2im)
+    Maurograd::Ext.respond_to?(:col2im) &&
+    Maurograd::Ext.respond_to?(:maxpool2d_forward) &&
+    Maurograd::Ext.respond_to?(:maxpool2d_backward)
   raise LoadError, "maurograd_ext loaded but key methods not defined"
 end

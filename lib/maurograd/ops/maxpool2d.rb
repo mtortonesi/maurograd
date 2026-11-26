@@ -3,22 +3,30 @@ require_relative "../utils/utils"
 
 module Maurograd
   module Ops
-    # MaxPool2D (NCHW) implemented with im2col + reduction.
+    # MaxPool2D (NCHW).
     #
     # Input:  X [N, C, H, W]
     # Output: Y [N, C, OH, OW]
     #
     # Pooling is per-channel (no mixing across channels).
     #
-    # Forward:
-    # - col = im2col(X, KH, KW, stride, padding) -> [R, C*KH*KW], R = N*OH*OW
-    # - reshape col -> [R, C, KH*KW]
-    # - max over last axis -> [R, C]
-    # - reshape back to [N, C, OH, OW]
+    # Both passes run in the C extension (Ext.maxpool2d_forward/backward):
     #
-    # Backward:
-    # - distribute dout only to the positions that were maximal in each window
-    #   (scatter-add via col2im).
+    # Forward: for every output position, scan its KH x KW window and record
+    # both the maximum (-> Y) and WHERE it was (-> @argmax, the flat index
+    # into X of the winning element, or -1 if it was a padding cell).
+    #
+    # Backward: max(...) passes its gradient only to the element that won,
+    # so dX is all zeros except dX[argmax] += dY for each output (+= because
+    # overlapping windows, i.e. stride < kernel, can pick the same element).
+    #
+    # Ties go to the first maximum in the window (row-major order), so each
+    # output's gradient lands on exactly one input - as in PyTorch.
+    #
+    # An earlier version built the full im2col window matrix [R, C*KH*KW]
+    # plus a float mask of the same size with Numo, and scattered back with
+    # col2im. Same result (bar ties, which it split across ALL tied
+    # elements), but several times slower and far more memory-hungry.
     class MaxPool2D
       def self.apply(input, kernel_h, kernel_w, stride = nil, padding = 0)
         stride ||= kernel_h
@@ -36,9 +44,7 @@ module Maurograd
 
         # Cached for backward:
         @input_shape = nil
-        @out_h = nil
-        @out_w = nil
-        @mask = nil          # [R, C, KH*KW] float {0,1}
+        @argmax = nil # Int32 [N, C, OH, OW], flat index into the input (-1 = padding)
       end
 
       def forward
@@ -50,40 +56,22 @@ module Maurograd
         #
         # This affects:
         # - output size OH/OW
-        # - which elements can become the max in a window
+        # - which elements can become the max in a window (a padded zero
+        #   beats an all-negative window; its gradient then goes nowhere)
         #
-        # In our implementation, padding is delegated to Utils.im2col/col2im,
-        # so forward/backward stay clean and consistent.
+        # Note that PyTorch pads with -inf instead, so padding never wins
+        # there. With non-negative inputs (e.g. after ReLU, the usual case)
+        # the two conventions agree.
         input = @inputs.first
         x = input.data
+        x = x.copy unless x.contiguous?
         @input_shape = x.shape
-        n, c, h, w = @input_shape
 
-        @out_h = (h + 2 * @padding - @kernel_h) / @stride + 1
-        @out_w = (w + 2 * @padding - @kernel_w) / @stride + 1
-
-        # 1) Extract windows
-        col = Utils.im2col(x, @kernel_h, @kernel_w, @stride, @padding) # [R, C*KH*KW]
-        r = n * @out_h * @out_w
-
-        # 2) Reshape so pooling is per-channel
-        col3 = col.reshape(r, c, @kernel_h * @kernel_w) # [R, C, K]
-
-        # 3) Max over K
-        max_vals = col3.max(axis: 2)                    # [R, C]
-
-        # 4) Build mask for backward (1 where equals max, else 0)
-        max3 = max_vals.reshape(r, c, 1)                # [R, C, 1]
-        @mask = Numo::SFloat.cast(col3.eq(max3))         # [R, C, K]
-
-        # 5) Reshape to NCHW
-        y =
-          max_vals
-            .reshape(n, @out_h, @out_w, c)
-            .transpose(0, 3, 1, 2)
-            .copy
+        y, argmax = Maurograd::Ext.maxpool2d_forward(x, @kernel_h, @kernel_w, @stride, @padding)
 
         requires_grad = input.requires_grad
+        @argmax = argmax if requires_grad
+
         out = Tensor.new(y, requires_grad: requires_grad)
         out.creator = self if requires_grad
         out
@@ -96,20 +84,9 @@ module Maurograd
         return unless input.requires_grad
 
         dout = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        n, c, _h, _w = @input_shape
-        r = n * @out_h * @out_w
+        dout = dout.copy unless dout.contiguous?
 
-        # dout: [N, C, OH, OW] -> [R, C]
-        dout_col = dout.transpose(0, 2, 3, 1).copy.reshape(r, c)
-
-        # Expand dout to [R, C, 1], multiply by mask -> [R, C, K]
-        dcol3 = @mask * dout_col.reshape(r, c, 1)
-
-        # Back to [R, C*K]
-        dcol = dcol3.reshape(r, c * @kernel_h * @kernel_w)
-
-        # Scatter back into input shape
-        dx = Utils.col2im(dcol.copy, @input_shape, @kernel_h, @kernel_w, @stride, @padding)
+        dx = Maurograd::Ext.maxpool2d_backward(dout, @argmax, @input_shape)
         input.accumulate_grad(dx)
       end
     end

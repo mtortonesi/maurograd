@@ -26,6 +26,7 @@ static VALUE mExt;
 static VALUE cNumo;
 static VALUE cNArray_;
 static VALUE cSFloat_;
+static VALUE cInt32_;
 static ID id_zeros;
 static ID id_col;
 static VALUE sym_col;
@@ -817,11 +818,140 @@ static VALUE mg_col2im(VALUE self,
 
 /* ---------- Init ---------- */
 
+/* ---------- Maurograd::Ext.maxpool2d_forward / maxpool2d_backward ---------- */
+
+/*
+ * Direct MaxPool2D kernels (NCHW), replacing the im2col + Numo reduction
+ * path: no [rows, C*Kh*Kw] window matrix and no float mask are ever built.
+ *
+ * Forward returns [y, argmax]:
+ *   y      SFloat [N,C,OH,OW]  window maxima
+ *   argmax Int32  [N,C,OH,OW]  flat index into x of each window's maximum,
+ *                              or -1 when the maximum is a padding cell
+ *
+ * Semantics:
+ * - Padding cells count as 0.0 (Maurograd's documented convention; PyTorch
+ *   pads with -inf instead).
+ * - Ties go to the FIRST maximum in row-major window order, so each output
+ *   sends its gradient to exactly one input (as PyTorch does).
+ *
+ * Backward scatters dout into dx at the recorded argmax positions (windows
+ * can overlap when stride < kernel, hence +=).
+ */
+static VALUE mg_maxpool2d_forward(VALUE self, VALUE vx, VALUE vkh, VALUE vkw, VALUE vstride, VALUE vpad)
+{
+    if (!rb_obj_is_kind_of(vx, cSFloat_)) rb_raise(rb_eTypeError, "x must be Numo::SFloat");
+
+    narray_t *nx;
+    GetNArray(vx, nx);
+    if (nx->ndim != 4) rb_raise(rb_eArgError, "x must be 4D (NCHW)");
+    if (!RTEST(na_check_contiguous(vx))) rb_raise(rb_eArgError, "x must be contiguous");
+
+    const int kh = NUM2INT(vkh), kw = NUM2INT(vkw);
+    const int stride = NUM2INT(vstride), pad = NUM2INT(vpad);
+    if (kh <= 0 || kw <= 0 || stride <= 0 || pad < 0) rb_raise(rb_eArgError, "invalid kernel/stride/padding");
+
+    const int N = sz_to_int(nx->shape[0], "N");
+    const int C = sz_to_int(nx->shape[1], "C");
+    const int H = sz_to_int(nx->shape[2], "H");
+    const int W = sz_to_int(nx->shape[3], "W");
+
+    const int OH = (H + 2*pad - kh) / stride + 1;
+    const int OW = (W + 2*pad - kw) / stride + 1;
+    if (OH <= 0 || OW <= 0) rb_raise(rb_eArgError, "invalid output shape");
+    if ((size_t)N * C * H * W > (size_t)INT32_MAX) rb_raise(rb_eArgError, "input too large for int32 argmax");
+
+    size_t oshape[4] = { (size_t)N, (size_t)C, (size_t)OH, (size_t)OW };
+    VALUE vy = nary_new(cSFloat_, 4, oshape);
+    VALUE vidx = nary_new(cInt32_, 4, oshape);
+
+    const float *x = (const float*)na_get_pointer_for_read(vx);
+    float *y = (float*)na_get_pointer_for_write(vy);
+    int32_t *idx = (int32_t*)na_get_pointer_for_write(vidx);
+
+    size_t o = 0;
+    for (int nc = 0; nc < N * C; nc++) {
+        const float *xp = x + (size_t)nc * H * W;
+        const int32_t plane = nc * H * W;
+        for (int oy = 0; oy < OH; oy++) {
+            const int y0 = oy * stride - pad;
+            for (int ox = 0; ox < OW; ox++, o++) {
+                const int x0 = ox * stride - pad;
+                float best = 0.0f;
+                int32_t best_i = -1;
+                int first = 1;
+                for (int ky = 0; ky < kh; ky++) {
+                    const int iy = y0 + ky;
+                    const int row_in = (unsigned)iy < (unsigned)H;
+                    for (int kx = 0; kx < kw; kx++) {
+                        const int ix = x0 + kx;
+                        const int in = row_in && (unsigned)ix < (unsigned)W;
+                        const float v = in ? xp[iy * W + ix] : 0.0f;
+                        if (first || v > best) {
+                            best = v;
+                            best_i = in ? plane + iy * W + ix : -1;
+                            first = 0;
+                        }
+                    }
+                }
+                y[o] = best;
+                idx[o] = best_i;
+            }
+        }
+    }
+
+    RB_GC_GUARD(vx);
+    return rb_assoc_new(vy, vidx);
+}
+
+static VALUE mg_maxpool2d_backward(VALUE self, VALUE vdout, VALUE vidx, VALUE vinput_shape)
+{
+    if (!rb_obj_is_kind_of(vdout, cSFloat_)) rb_raise(rb_eTypeError, "dout must be Numo::SFloat");
+    if (!rb_obj_is_kind_of(vidx, cInt32_)) rb_raise(rb_eTypeError, "argmax must be Numo::Int32");
+    if (!RTEST(na_check_contiguous(vdout))) rb_raise(rb_eArgError, "dout must be contiguous");
+    Check_Type(vinput_shape, T_ARRAY);
+    if (RARRAY_LEN(vinput_shape) != 4) rb_raise(rb_eArgError, "input_shape must have 4 dims");
+
+    narray_t *nd, *ni;
+    GetNArray(vdout, nd);
+    GetNArray(vidx, ni);
+    if (nd->size != ni->size) rb_raise(rb_eArgError, "dout/argmax size mismatch");
+
+    size_t xshape[4];
+    size_t xsize = 1;
+    for (int i = 0; i < 4; i++) {
+        long d = NUM2LONG(rb_ary_entry(vinput_shape, i));
+        if (d <= 0) rb_raise(rb_eArgError, "invalid input_shape");
+        xshape[i] = (size_t)d;
+        xsize *= (size_t)d;
+    }
+
+    VALUE vdx = nary_new(cSFloat_, 4, xshape);
+    float *dx = (float*)na_get_pointer_for_write(vdx);
+    memset(dx, 0, sizeof(float) * xsize);
+
+    const float *dout = (const float*)na_get_pointer_for_read(vdout);
+    const int32_t *idx = (const int32_t*)na_get_pointer_for_read(vidx);
+
+    for (size_t o = 0; o < nd->size; o++) {
+        const int32_t i = idx[o];
+        if (i >= 0) {
+            if ((size_t)i >= xsize) rb_raise(rb_eArgError, "argmax index out of range");
+            dx[i] += dout[o];
+        }
+    }
+
+    RB_GC_GUARD(vdout);
+    RB_GC_GUARD(vidx);
+    return vdx;
+}
+
 void Init_maurograd_ext(void)
 {
     cNumo   = rb_const_get(rb_cObject, rb_intern("Numo"));
     cNArray_ = rb_const_get(cNumo, rb_intern("NArray"));
     cSFloat_ = rb_const_get(cNumo, rb_intern("SFloat"));
+    cInt32_ = rb_const_get(cNumo, rb_intern("Int32"));
     id_zeros = rb_intern("zeros");
 
     mMaurograd = rb_define_module("Maurograd");
@@ -835,6 +965,9 @@ void Init_maurograd_ext(void)
 
     rb_define_singleton_method(mExt, "im2col", mg_im2col, 5);
     rb_define_singleton_method(mExt, "col2im", mg_col2im, 6);
+
+    rb_define_singleton_method(mExt, "maxpool2d_forward", mg_maxpool2d_forward, 5);
+    rb_define_singleton_method(mExt, "maxpool2d_backward", mg_maxpool2d_backward, 3);
 
     id_col = rb_intern("col");
     sym_col = ID2SYM(id_col);
