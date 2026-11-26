@@ -22,8 +22,6 @@ abort "Could not locate numo/narray.h inside #{spec.full_gem_path}" unless hdr
 numo_inc = File.dirname(File.dirname(hdr))
 $INCFLAGS << " -I#{numo_inc}"
 
-dir_config("numo", numo_inc)
-
 have_header("numo/narray.h") or abort "numo/narray.h not found even after adding include path"
 
 # Find OpenBLAS include and lib paths
