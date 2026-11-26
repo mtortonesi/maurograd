@@ -9,6 +9,7 @@
 
 require_relative "maurograd/bootstrap"
 
+Maurograd::Bootstrap.limit_blas_threads!
 Maurograd::Bootstrap.ensure_openblas!
 
 require "numo/narray"

@@ -10,6 +10,29 @@ module Maurograd
       "/usr/lib"
     ].freeze
 
+    # Environment variables that cap the thread pools of the BLAS/OpenMP
+    # libraries we load.
+    BLAS_THREAD_VARS = %w[OPENBLAS_NUM_THREADS OMP_NUM_THREADS].freeze
+
+    # Defaults BLAS/OpenMP thread pools to a single thread, unless the user
+    # has already chosen a value.
+    #
+    # Why: a Maurograd process loads two separate OpenBLAS libraries - the
+    # one maurograd_ext links against, and the copy vendored by
+    # numo-linalg-alt (used by Linear/MatMul via Numo's #dot). Each one starts
+    # its own pool of busy-waiting worker threads, and as soon as both are in
+    # use they starve each other: on a 10-core Apple M5, one LeNet training
+    # step went from 13 ms (single-threaded) to 278 ms (default threading).
+    # At the matrix sizes Maurograd works with, multithreaded BLAS has little
+    # to gain anyway.
+    #
+    # This must run before those libraries are loaded: both read the
+    # variables once, when they initialize. To experiment with threading,
+    # set the variables explicitly in the environment of the process.
+    def self.limit_blas_threads!
+      BLAS_THREAD_VARS.each { |var| ENV[var] ||= "1" }
+    end
+
     def self.ensure_openblas!
       # Don't override if the user has already set it.
       ENV["NUMO_LINALG_BACKEND"] ||= "openblas"
