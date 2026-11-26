@@ -60,7 +60,9 @@ module Maurograd
   require_relative "maurograd/losses/cross_entropy_with_logits"
 
   # Optimizers
+  require_relative "maurograd/optim/optimizer"
   require_relative "maurograd/optim/sgd"
+  require_relative "maurograd/optim/adam"
 
   # Datasets
   require_relative "maurograd/datasets/mnist"
