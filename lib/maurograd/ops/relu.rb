@@ -1,4 +1,5 @@
 require_relative "../tensor"
+require_relative "../utils/utils"
 
 module Maurograd
   module Ops
@@ -7,6 +8,10 @@ module Maurograd
     #
     # Backward:
     #   dy/dx = 1 if x > 0 else 0
+    #
+    # Both passes run in the C extension. Backward only needs to know where
+    # x was positive, and that is exactly where y is positive, so we cache
+    # the output y instead of a separate mask.
     class ReLU
       def self.apply(input)
         new(input).forward
@@ -16,17 +21,16 @@ module Maurograd
 
       def initialize(input)
         @inputs = [input]
-        @mask = nil
+        @y = nil
       end
 
       def forward
-        x = @inputs.first.data
+        input = @inputs.first
+        y = Maurograd::Ext.relu_forward(Utils.sfloat_contiguous(input.data))
 
-        # mask is 1 where x > 0, else 0 (float array, easy to multiply in backward)
-        @mask = Numo::SFloat.cast(x > 0)
-        y = x * @mask
+        requires_grad = input.requires_grad
+        @y = y if requires_grad
 
-        requires_grad = @inputs.first.requires_grad
         out = Tensor.new(y, requires_grad: requires_grad)
         out.creator = self if requires_grad
         out
@@ -36,8 +40,7 @@ module Maurograd
         input = @inputs.first
         return unless input.requires_grad
 
-        dy = grad_output.is_a?(Tensor) ? grad_output.data : grad_output
-        dx = dy * @mask
+        dx = Maurograd::Ext.relu_backward(Utils.sfloat_contiguous(grad_output), @y)
         input.accumulate_grad(dx)
       end
     end

@@ -92,6 +92,16 @@ module Maurograd
       out
     end
 
+    # Returns `a` as a contiguous Numo::SFloat, converting/copying only when
+    # needed. The C kernels require exactly that (they read raw float32
+    # memory), while arrays reaching an op can be strided views (e.g. after
+    # a transpose) or another dtype (e.g. a DFloat upstream gradient).
+    def self.sfloat_contiguous(a)
+      a = a.data if a.is_a?(Maurograd::Tensor)
+      a = Numo::SFloat.cast(a) unless a.is_a?(Numo::SFloat)
+      a.contiguous? ? a : a.copy
+    end
+
     def self.im2col(*args)
       Maurograd::Ext.im2col(*args)
     end
