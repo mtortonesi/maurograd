@@ -83,6 +83,8 @@ module Maurograd
 
           p.data -= @lr * m_hat / (p.backend.sqrt(v_hat) + @eps)
         end
+
+        eval_params!
       end
     end
   end

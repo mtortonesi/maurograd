@@ -29,6 +29,13 @@ module Maurograd
 
       private
 
+      # Lazy backends (MLX) only record the update; computing the new
+      # parameter values right away keeps each step's graph from being
+      # chained onto the next one. A no-op on the CPU backend.
+      def eval_params!
+        @params.group_by(&:backend).each { |backend, ps| backend.eval(ps.map(&:data)) }
+      end
+
       # Yields [param, grad, index] for each parameter that should be updated:
       # it requires grad and already has one (grad=nil means it never took
       # part in a backward pass yet, so there's nothing to apply).

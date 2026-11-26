@@ -65,3 +65,9 @@ ext/maurograd_ext/mkmf.log
 
 # Profiler output.
 stackprof*.dump
+ext/maurograd_mlx/Makefile
+ext/maurograd_mlx/maurograd_mlx.bundle
+ext/maurograd_mlx/maurograd_mlx.bundle.dSYM/
+ext/maurograd_mlx/maurograd_mlx.o
+ext/maurograd_mlx/maurograd_mlx.so
+ext/maurograd_mlx/mkmf.log

@@ -65,6 +65,8 @@ module Maurograd
 
           p.data -= @lr * g
         end
+
+        eval_params!
       end
     end
   end

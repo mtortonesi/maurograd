@@ -1,47 +1,63 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Builds the native extensions:
+# - ext/maurograd_ext (required): CPU kernels (BLAS: Accelerate on macOS,
+#   OpenBLAS elsewhere; MAUROGRAD_BLAS=accelerate|openblas overrides).
+# - ext/maurograd_mlx (optional): bindings for mlx-c, used by the MLX
+#   backend. Skipped, with a message, when mlx-c is not installed.
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EXT_DIR="${ROOT_DIR}/ext/maurograd_ext"
-
-if [[ ! -d "${EXT_DIR}" ]]; then
-  echo "ERROR: extension dir not found: ${EXT_DIR}" >&2
-  echo "Edit bin/build_ext and set EXT_DIR to the correct path." >&2
-  exit 1
-fi
-
-cd "${EXT_DIR}"
 
 cmd="${1:-build}"
 
 case "${cmd}" in
-  build)
-    echo "[build_ext] Running extconf.rb in ${EXT_DIR}"
-    bundle exec ruby extconf.rb
-
-    echo "[build_ext] Building native extension (make)"
-    make
-    ;;
-
-  clean)
-    echo "[build_ext] Cleaning build artifacts (make clean)"
-    make clean || true
-    ;;
-
-  rebuild)
-    echo "[build_ext] Rebuilding (clean + extconf + make)"
-    make clean || true
-    bundle exec ruby extconf.rb
-    make
-    ;;
-
+  build|clean|rebuild) ;;
   *)
     echo "Usage: ./bin/build_ext [build|clean|rebuild]" >&2
     exit 2
     ;;
 esac
 
-echo "[build_ext] Done."
-echo "[build_ext] Built artifacts:"
-ls -1 "${EXT_DIR}"/maurograd_ext.{bundle,so} 2>/dev/null || true
+# run_one <name> <required:yes|no>
+run_one() {
+  local name="$1" required="$2"
+  local dir="${ROOT_DIR}/ext/${name}"
 
+  if [[ ! -d "${dir}" ]]; then
+    echo "ERROR: extension dir not found: ${dir}" >&2
+    exit 1
+  fi
+
+  (
+    cd "${dir}"
+
+    if [[ "${cmd}" == "clean" || "${cmd}" == "rebuild" ]]; then
+      echo "[build_ext] ${name}: cleaning build artifacts (make clean)"
+      [[ -f Makefile ]] && make clean >/dev/null || true
+    fi
+    [[ "${cmd}" == "clean" ]] && exit 0
+
+    echo "[build_ext] ${name}: running extconf.rb"
+    if ! bundle exec ruby extconf.rb; then
+      if [[ "${required}" == "yes" ]]; then
+        echo "ERROR: extconf.rb failed for ${name}" >&2
+        exit 1
+      fi
+      echo "[build_ext] ${name}: skipped (optional; its dependencies are not installed)"
+      exit 0
+    fi
+
+    echo "[build_ext] ${name}: building (make)"
+    make
+  )
+}
+
+run_one maurograd_ext yes
+run_one maurograd_mlx no
+
+echo "[build_ext] Done."
+if [[ "${cmd}" != "clean" ]]; then
+  echo "[build_ext] Built artifacts:"
+  ls -1 "${ROOT_DIR}"/ext/*/*.{bundle,so} 2>/dev/null || true
+fi

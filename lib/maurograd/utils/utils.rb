@@ -41,7 +41,7 @@ module Maurograd
       #
       # This happens when an operand had fewer dimensions and was implicitly
       # left-padded with ones. We reduce along axis 0 until ranks match.
-      while res.ndim > shape.length
+      while res.shape.length > shape.length
         res = backend.sum(res, axis: 0, keepdims: false)
       end
 

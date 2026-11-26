@@ -69,6 +69,10 @@ module Maurograd
     end
   end
 
+  # The MLX backend is optional (it needs mlx-c and the maurograd_mlx
+  # extension), so it is only loaded the first time someone asks for it.
+  Backends.register_loader(:mlx) { require_relative "backends/mlx" }
+
   module Ops
     # The backend shared by all the given tensors (nils ignored). Ops run on
     # their inputs' backend, so mixing backends in one op is an error rather
@@ -88,8 +92,10 @@ module Maurograd
 
   class << self
     # The backend used for tensors created without an explicit backend:.
+    # Starts as the MAUROGRAD_BACKEND environment variable (e.g. "mlx"), or
+    # :cpu, so existing scripts can switch backend without code changes.
     def backend
-      @backend ||= Backends.fetch(:cpu)
+      @backend ||= Backends.fetch(ENV.fetch("MAUROGRAD_BACKEND", "cpu"))
     end
 
     def backend=(name_or_backend)

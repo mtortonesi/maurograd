@@ -37,6 +37,18 @@ module Maurograd
         native?(x) ? x : ::Numo::SFloat.cast(x)
       end
 
+      # Forces the computation of the given arrays. A no-op here: Numo
+      # computes eagerly. (Lazy backends such as MLX need it.)
+      def eval(_arrays)
+        nil
+      end
+
+      # Starts computing the given arrays without waiting for the result.
+      # Also a no-op here.
+      def eval_async(_arrays)
+        nil
+      end
+
       # Copies a native array to host memory, as a Numo array.
       def to_numo(x)
         x

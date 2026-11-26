@@ -91,6 +91,10 @@ module Maurograd
           unbiased_var = batch_var * (m.to_f / (m - 1))
           @stats.running_mean = (@stats.running_mean * (1.0 - @momentum)) + (bk.reshape(batch_mean, *shape) * @momentum)
           @stats.running_var = (@stats.running_var * (1.0 - @momentum)) + (bk.reshape(unbiased_var, *shape) * @momentum)
+          # Nothing reads the running statistics during training, so on a
+          # lazy backend each update would chain onto the previous one for a
+          # whole epoch: start computing them now instead.
+          bk.eval_async([@stats.running_mean, @stats.running_var])
         end
 
         # ctx (cached for backward) holds x_hat and inv_std. In training
