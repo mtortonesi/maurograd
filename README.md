@@ -23,6 +23,36 @@ look if you want to see backpropagation with nothing but plain Ruby arithmetic
 in the way.
 
 
+## Installation
+
+```sh
+gem install maurograd
+```
+
+Maurograd compiles a C extension on install, so it needs a C compiler and a
+BLAS library:
+
+- **macOS**: the Xcode command line tools (`xcode-select --install`). The
+  extension uses Apple's Accelerate framework, so nothing else is needed.
+- **Linux**: a compiler and the OpenBLAS headers, e.g. on Debian/Ubuntu
+  `sudo apt-get install build-essential libopenblas-dev`.
+
+There is no pure-Ruby fallback: if the extension can't be built, Maurograd
+can't be loaded.
+
+For the Apple Silicon GPU backend, install mlx-c first, then the separate
+`maurograd-mlx` gem:
+
+```sh
+brew install mlx-c
+gem install maurograd-mlx
+```
+
+To work on Maurograd itself: `bundle install`, then `./bin/build_ext` to
+build the extensions (the MLX one is skipped without mlx-c) and
+`bundle exec bake ci` to build and run the tests.
+
+
 ## Examples
 
 While a full documentation will come down the road, Maurograd comes with a
@@ -50,9 +80,10 @@ run on a pluggable *backend* (`lib/maurograd/backends/`):
   The C extension links Accelerate on macOS and OpenBLAS elsewhere; set
   `MAUROGRAD_BLAS=openblas` (or `accelerate`) when building to choose.
 - `:mlx`: [MLX](https://github.com/ml-explore/mlx) arrays, running on the
-  Apple Silicon GPU, through the optional `ext/maurograd_mlx` bindings for
-  [mlx-c](https://github.com/ml-explore/mlx-c) (`brew install mlx-c`, then
-  `./bin/build_ext`; the extension is skipped when mlx-c is missing).
+  Apple Silicon GPU, through bindings for
+  [mlx-c](https://github.com/ml-explore/mlx-c) in `ext/maurograd_mlx`. It
+  ships as the separate `maurograd-mlx` gem (see Installation); once that
+  is installed, Maurograd loads it by itself when you ask for `:mlx`.
 
 Pick one for a whole script with `MAUROGRAD_BACKEND=mlx`, or in code with
 `Maurograd.backend = :mlx` (before building the model) or `model.to(:mlx)`.
@@ -61,9 +92,10 @@ Pick one for a whole script with `MAUROGRAD_BACKEND=mlx`, or in code with
 Two runtime defaults worth knowing about:
 
 - BLAS/OpenMP thread pools default to a single thread
-  (`OPENBLAS_NUM_THREADS`/`OMP_NUM_THREADS`, unless you set them): the
-  process loads two OpenBLAS copies (ours and numo-linalg-alt's), whose
-  thread pools otherwise starve each other.
+  (`OPENBLAS_NUM_THREADS`/`OMP_NUM_THREADS`, unless you set them):
+  numo-linalg-alt's bundled OpenBLAS keeps busy-waiting threads that slow
+  training down, badly so on Linux, where the extension's own OpenBLAS adds
+  a second pool.
 - The MLX backend runs float32 matrix products at full precision
   (`MLX_ENABLE_TF32=0`, unless you set it), like the CPU backend.
 
