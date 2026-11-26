@@ -29,6 +29,19 @@ def ci
   system("bundle", "exec", "sus", exception: true)
 end
 
+# Build the maurograd and maurograd-mlx gems into pkg/ (what gets pushed to
+# rubygems.org: `gem push pkg/maurograd-<version>.gem`, and the same for
+# maurograd-mlx). Gems are built from the files git tracks, so commit first.
+def package
+  require "fileutils"
+  FileUtils.mkdir_p(File.join(ROOT, "pkg"))
+  %w[maurograd maurograd-mlx].each do |name|
+    Dir.chdir(ROOT) do
+      system("gem", "build", "#{name}.gemspec", "--output", File.join("pkg", "#{name}-#{gem_version}.gem"), exception: true)
+    end
+  end
+end
+
 # Check code style with Standard (see .standard.yml for the couple of
 # exceptions we actually need).
 def lint
@@ -41,6 +54,11 @@ def lint_fix
 end
 
 private
+
+def gem_version
+  require_relative "lib/maurograd/version"
+  Maurograd::VERSION
+end
 
 def run_build_ext(subcommand)
   system(BUILD_EXT, subcommand, exception: true)
