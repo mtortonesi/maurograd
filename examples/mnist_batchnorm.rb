@@ -4,13 +4,16 @@
 # BatchNorm actually changes about training: same architecture, same data,
 # same seed, same learning rate, only its presence differs.
 #
-# What to look for in the output: at the `lr` below, both runs end up in
-# roughly the same place by epoch 3 - but the "with BatchNorm2D" run gets
-# there much faster. Watch epoch 1's test accuracy specifically: at the time
-# this comment was written, "without" landed around 94% after one epoch,
-# while "with" was already around 97% - within two points of its own
-# epoch-3 result. That's BatchNorm's most reliable practical benefit: not a better
-# final answer, but a much shorter path to a good one.
+# What to look for in the output: at the `lr` below, the two runs are hard
+# to tell apart. At the time this comment was written, both reached about
+# 97% test accuracy after one epoch and about 98.7-98.9% after three, on
+# both the CPU and the MLX backend. That is a result worth knowing: LeNet
+# is only two conv layers deep, and MNIST is easy, so plain SGD already
+# trains it quickly and BatchNorm has little left to speed up. Its benefits
+# (faster, more stable training) grow with depth, where activation scales
+# drift more from layer to layer. Treat any epoch-1 gap of a point or two
+# as noise: at this learning rate, tiny numerical differences (a different
+# BLAS, say) are enough to change the early trajectory.
 #
 # Try varying `lr` yourself. It's tempting to assume BatchNorm always makes
 # training *more* forgiving of a high learning rate - that's the textbook
