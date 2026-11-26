@@ -303,17 +303,8 @@ static VALUE mg_conv2d_forward(VALUE self,
     const int rows = N * OH * OW;
     const int K    = C * Kh * Kw;
 
-    // Allocate output NArray [N,Cout,OH,OW]
-    size_t out_shape[4];
-    out_shape[0] = (size_t)N;
-    out_shape[1] = (size_t)Cout;
-    out_shape[2] = (size_t)OH;
-    out_shape[3] = (size_t)OW;
-
-    // Allocate temporary buffers as NArray too (so Ruby GC manages them)
-    // col: [rows, K], out2d: [rows, Cout]
-    // size_t col_shape[2]  = { (size_t)rows, (size_t)K };
-    // size_t o2_shape[2]   = { (size_t)rows, (size_t)Cout };
+    // Allocate the output [N,Cout,OH,OW] and the temporary buffers
+    // col [rows, K] and out2d [rows, Cout] as NArrays, so Ruby's GC manages them.
     VALUE vcol = sfloat_new_2d(rows, K);
     VALUE vout2 = sfloat_new_2d(rows, Cout);
     VALUE vout = sfloat_new_4d(N, Cout, OH, OW);
@@ -324,9 +315,7 @@ static VALUE mg_conv2d_forward(VALUE self,
 
     const float *b = NULL;
     if (vbias != Qnil) {
-        narray_t *nb;
-        GetNArray(vbias, nb);
-        // bias expected [Cout] or [1,Cout] (could be made more permissive later)
+        // Shape already checked above: bias is [Cout].
         b = (const float*)na_get_pointer_for_read(vbias);
     }
 
@@ -782,9 +771,6 @@ static VALUE mg_col2im(VALUE self,
                        VALUE vstride,
                        VALUE vpad)
 {
-    narray_t *ndc;
-    GetNArray(vdcol, ndc);
-
     if (!rb_obj_is_kind_of(vdcol, cSFloat_)) {
         rb_raise(rb_eTypeError, "col2im supports only Numo::SFloat");
     }
