@@ -116,6 +116,12 @@ describe "MLX backend" do
     end
   end
 
+  it "matches CPU on Permute and transpose" do
+    Maurograd.seed!(15)
+    cpu, mlx = on_both(randn(2, 3, 4, 5)) { |x| x.permute(0, 2, 3, 1).transpose(1, 3) }
+    expect_match(cpu, mlx)
+  end
+
   it "matches CPU on ReLU" do
     Maurograd.seed!(5)
     cpu, mlx = on_both(randn(4, 6)) { |x| Maurograd::Ops::ReLU.apply(x) }

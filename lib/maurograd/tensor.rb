@@ -15,6 +15,7 @@ require_relative "ops/linear"
 require_relative "ops/flatten"
 require_relative "ops/relu"
 require_relative "ops/maxpool2d"
+require_relative "ops/permute"
 
 module Maurograd
   # Tensor is the core data structure of Maurograd.
@@ -300,10 +301,11 @@ module Maurograd
     # which is almost never what we want in CNNs.
     #
     # Therefore this method swaps only two axes (default: the last two).
+    # It is an autograd op (Ops::Permute): gradients flow back through it.
     def transpose(ax0 = -2, ax1 = -1)
       axes = (0...ndim).to_a
       axes[ax0], axes[ax1] = axes[ax1], axes[ax0]
-      Tensor.new(@backend.transpose(@data, *axes), requires_grad: @requires_grad, backend: @backend)
+      Ops::Permute.apply(self, axes)
     end
 
     # Permute tensor axes arbitrarily.
@@ -312,11 +314,14 @@ module Maurograd
     # - NCHW -> NHWC: permute(0, 2, 3, 1)
     # - NHWC -> NCHW: permute(0, 3, 1, 2)
     #
-    # Note:
-    # - This returns a new Tensor that shares the underlying data view semantics of Numo.
-    # - If you later need contiguous memory, you may need an explicit copy (future feature).
+    # Notes:
+    # - It is an autograd op (Ops::Permute): gradients flow back through it.
+    # - Negative axes count from the end; the axes must be a permutation of
+    #   0...ndim, or it raises ArgumentError.
+    # - On the CPU backend the result may be a strided Numo view; the kernels
+    #   that need contiguous memory copy it themselves.
     def permute(*axes)
-      Tensor.new(@backend.transpose(@data, *axes), requires_grad: @requires_grad, backend: @backend)
+      Ops::Permute.apply(self, axes)
     end
   end
 end
