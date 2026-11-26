@@ -69,9 +69,18 @@ module Maurograd
     end
   end
 
-  # The MLX backend is optional (it needs mlx-c and the maurograd_mlx
-  # extension), so it is only loaded the first time someone asks for it.
-  Backends.register_loader(:mlx) { require_relative "backends/mlx" }
+  # The MLX backend ships separately, in the maurograd-mlx gem (it needs
+  # mlx-c and its own extension), so it is only loaded the first time
+  # someone asks for it. A plain `require` (not require_relative) finds it in
+  # whichever installed gem provides it, or under lib/ in a repo checkout.
+  Backends.register_loader(:mlx) do
+    require "maurograd/backends/mlx"
+  rescue LoadError => e
+    raise unless e.path == "maurograd/backends/mlx"
+
+    raise LoadError, "the MLX backend is in the maurograd-mlx gem, which is not installed " \
+      "(it needs mlx-c: `brew install mlx-c`, then `gem install maurograd-mlx`)"
+  end
 
   module Ops
     # The backend shared by all the given tensors (nils ignored). Ops run on

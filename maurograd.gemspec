@@ -11,22 +11,32 @@ Gem::Specification.new do |spec|
   spec.summary = "A didactic tensor autograd framework for Ruby, with CNN support."
   spec.description = <<~DESC
     Maurograd is a tensor-based automatic differentiation framework for
-    Ruby, built on Numo::NArray, with 2D convolution implemented in a C
-    extension (im2col + GEMM + col2im) backed by OpenBLAS. It started as a
-    clone of Andrej Karpathy's micrograd and grew into something more
-    ambitious: a reasonably CPU-competent framework for building and
-    training small CNNs, designed to be simple enough to read end to end.
+    Ruby, written to be read end to end. Tensors and the autograd engine are
+    plain Ruby; the math runs on a pluggable backend. The default CPU
+    backend uses Numo::NArray plus a C extension for convolution, pooling,
+    ReLU and BatchNorm (BLAS from Apple's Accelerate on macOS, OpenBLAS
+    elsewhere). Includes SGD with momentum, Adam, Dropout and BatchNorm.
+    An Apple Silicon GPU backend is available separately, in the
+    maurograd-mlx gem.
   DESC
   spec.homepage = "https://github.com/mtortonesi/maurograd"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.0"
+  spec.required_ruby_version = ">= 3.2"
 
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
+  # An explicit allowlist, so development files (Gemfile, bake.rb, test/,
+  # bench/, config/, ...) never end up in the gem. The MLX backend and its
+  # extension ship in maurograd-mlx (see maurograd-mlx.gemspec).
   spec.files = Dir.chdir(__dir__) do
-    `git ls-files -z`.split("\x0").reject do |f|
-      f.match(%r{\A(?:test|bench|\.github)/}) || f == ".gitignore"
+    `git ls-files -z`.split("\x0").select do |f|
+      next false if f == "lib/maurograd/backends/mlx.rb" || f == "lib/maurograd-mlx.rb"
+
+      f.start_with?("lib/", "ext/maurograd_ext/", "examples/") ||
+        %w[README.md LICENSE CHANGELOG.md].include?(f)
     end
   end
 

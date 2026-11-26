@@ -3,8 +3,10 @@
 source "https://rubygems.org"
 
 # Runtime + development dependencies declared in the gemspec
-# (numo-narray-alt, numo-linalg-alt, sus).
-gemspec
+# (numo-narray-alt, numo-linalg-alt, sus). Named, because the repo also holds
+# maurograd-mlx.gemspec; in a checkout, the MLX extension is built by
+# bin/build_ext instead.
+gemspec name: "maurograd"
 
 # Task runner (see bake.rb). bake-test auto-detects and runs sus.
 gem "bake", "~> 0.25.0"

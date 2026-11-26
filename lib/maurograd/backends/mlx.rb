@@ -1,5 +1,7 @@
 require "numo/narray"
-require_relative "../backends"
+# A plain require, not require_relative: installed as a gem, this file is in
+# maurograd-mlx while backends.rb is in maurograd.
+require "maurograd/backends"
 
 # MLX runs float32 matrix products in TF32 on GPUs that support it (e.g.
 # Apple M5): faster, but only ~10 mantissa bits, i.e. ~1e-3 relative error,
@@ -16,9 +18,10 @@ rescue LoadError
   pattern = File.join(File.expand_path("../../..", __dir__), "ext", "maurograd_mlx", "maurograd_mlx.{bundle,so}")
   candidate = Dir.glob(pattern).first
   raise LoadError, <<~MSG unless candidate
-    the MLX backend needs the maurograd_mlx extension, which was not found
-    (looked for #{pattern}). It needs mlx-c (`brew install mlx-c`); build
-    it with `./bin/build_ext`.
+    the MLX backend needs the maurograd_mlx extension, which was not found.
+    It needs mlx-c (`brew install mlx-c`). Installed as a gem, reinstall
+    maurograd-mlx after installing mlx-c; in a repo checkout, run
+    `./bin/build_ext` (looked for #{pattern}).
   MSG
 
   require candidate
