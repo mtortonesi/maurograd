@@ -43,6 +43,7 @@ module Maurograd
   require_relative "maurograd/ops/flatten"
   require_relative "maurograd/ops/relu"
   require_relative "maurograd/ops/maxpool2d"
+  require_relative "maurograd/ops/batchnorm2d"
 
   # Layers (high-level modules that own parameters).
   require_relative "maurograd/layers/conv2d"
@@ -50,6 +51,7 @@ module Maurograd
   require_relative "maurograd/layers/flatten"
   require_relative "maurograd/layers/maxpool2d"
   require_relative "maurograd/layers/relu"
+  require_relative "maurograd/layers/batchnorm2d"
   require_relative "maurograd/layers/sequential"
 
   # Loss functions
