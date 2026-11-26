@@ -24,10 +24,16 @@ in the way.
 
 ## Examples
 
-While a full documentation will come down the road, Maurograd comes with an
-ANN classifier example that should explain how to use the framework: a
-multi-class classifier for digit recognition on the MNIST dataset, based on
-the LeNet CNN architecture.
+While a full documentation will come down the road, Maurograd comes with a
+couple of examples under `examples/` that should explain how to use the
+framework:
+
+- [`mnist.rb`](examples/mnist.rb): a multi-class classifier for digit
+  recognition on the MNIST dataset, based on the LeNet CNN architecture.
+- [`mnist_batchnorm.rb`](examples/mnist_batchnorm.rb): the same LeNet-style
+  CNN, trained twice - once as-is, once with a `BatchNorm2D` layer after
+  every `Conv2D` - so you can see what BatchNorm actually changes about
+  training, rather than just reading about it.
 
 (An MLP classifier for the two moons dataset also exists, but it's built on
 the scalar-valued engine, so it now lives in
