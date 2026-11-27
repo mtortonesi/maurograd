@@ -18,6 +18,13 @@ version.
   Hashes), and provides `parameters`, `named_parameters`, `children`,
   `modules`, `train`/`eval`/`training?`, `to`, `call` (so `model.call(x)`
   works like `forward`) and a short `inspect`. Shared parameters are listed once.
+- Differentiable elementwise functions `Tensor#exp`, `#log`, `#sigmoid`,
+  `#tanh` and `#silu`, and the activation layers `Layers::Sigmoid`,
+  `Layers::Tanh` and `Layers::SiLU`.
+- `Tensor#sum` and the new `Tensor#mean` take `axis:` (an axis or a list of
+  them, negative counting from the end) and `keepdims:`; e.g.
+  `x.mean(axis: [2, 3])` is global average pooling.
+- `Tensor#/` (by a number or a tensor) and unary minus.
 
 ### Changed
 

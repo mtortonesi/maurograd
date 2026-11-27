@@ -130,6 +130,22 @@ describe "MLX backend" do
     expect_match(cpu, mlx)
   end
 
+  it "matches CPU on the elementwise functions" do
+    Maurograd.seed!(20)
+    cpu, mlx = on_both(randn(2, 3, 4, 5)) do |x|
+      x.silu + (x.tanh * x.sigmoid) + (x * 0.5).exp + ((x * x) + 1.0).log - (x / 3)
+    end
+    expect_match(cpu, mlx)
+  end
+
+  it "matches CPU on sum and mean over axes" do
+    Maurograd.seed!(21)
+    cpu, mlx = on_both(randn(2, 3, 4, 5)) do |x|
+      x.sum(axis: [1, 3]) + x.mean(axis: -1, keepdims: true).sum(axis: [1, 3]) + x.mean(axis: [2, 3]).sum(axis: 1, keepdims: true)
+    end
+    expect_match(cpu, mlx)
+  end
+
   it "matches CPU on ReLU" do
     Maurograd.seed!(5)
     cpu, mlx = on_both(randn(4, 6)) { |x| Maurograd::Ops::ReLU.apply(x) }

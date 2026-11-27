@@ -16,6 +16,7 @@ require_relative "ops/relu"
 require_relative "ops/maxpool2d"
 require_relative "ops/permute"
 require_relative "ops/reshape"
+require_relative "ops/elementwise"
 
 module Maurograd
   # Tensor is the core data structure of Maurograd.
@@ -241,8 +242,19 @@ module Maurograd
       Ops::Power.apply(self, other)
     end
 
-    def sum
-      Ops::Sum.apply(self)
+    # Sum of all elements (a scalar), or over the given axes:
+    # x.sum(axis: 1), x.sum(axis: [2, 3], keepdims: true). See Ops::Sum.
+    def sum(axis: nil, keepdims: false)
+      Ops::Sum.apply(self, axis: axis, keepdims: keepdims)
+    end
+
+    # Mean of all elements, or over the given axes (same arguments as
+    # #sum): the sum times 1/count, so its gradient is the upstream
+    # gradient spread evenly over the elements that were averaged.
+    def mean(axis: nil, keepdims: false)
+      axes = Ops::Sum.normalize_axes(axis, ndim)
+      count = axes ? axes.map { |a| shape[a] }.reduce(1, :*) : size
+      sum(axis: axis, keepdims: keepdims) * (1.0 / count)
     end
 
     def -(other)
@@ -254,6 +266,31 @@ module Maurograd
       other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
       Ops::Mul.apply(self, other)
     end
+
+    # x / y: by a number it's x * (1/y); by a Tensor, x * y**-1, so the
+    # gradient comes from Mul and Power with no op of its own.
+    def /(other)
+      return self * (1.0 / other) if other.is_a?(Numeric)
+
+      other = Tensor.new(other, backend: @backend) unless other.is_a?(Tensor)
+      self * (other**-1)
+    end
+
+    # -x, as x * -1.
+    def -@
+      self * -1.0
+    end
+
+    # Elementwise functions (Ops::Elementwise and its subclasses).
+    def exp = Ops::Exp.apply(self)
+
+    def log = Ops::Log.apply(self)
+
+    def sigmoid = Ops::Sigmoid.apply(self)
+
+    def tanh = Ops::Tanh.apply(self)
+
+    def silu = Ops::SiLU.apply(self)
 
     def linear(weight, bias = nil)
       weight = Tensor.new(weight, backend: @backend) unless weight.is_a?(Tensor)

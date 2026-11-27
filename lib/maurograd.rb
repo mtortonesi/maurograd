@@ -49,6 +49,8 @@ module Maurograd
   require_relative "maurograd/ops/relu"
   require_relative "maurograd/ops/maxpool2d"
   require_relative "maurograd/ops/permute"
+  require_relative "maurograd/ops/reshape"
+  require_relative "maurograd/ops/elementwise"
   require_relative "maurograd/ops/batchnorm2d"
   require_relative "maurograd/ops/dropout"
 
@@ -59,6 +61,7 @@ module Maurograd
   require_relative "maurograd/layers/flatten"
   require_relative "maurograd/layers/maxpool2d"
   require_relative "maurograd/layers/relu"
+  require_relative "maurograd/layers/activations"
   require_relative "maurograd/layers/batchnorm2d"
   require_relative "maurograd/layers/dropout"
   require_relative "maurograd/layers/sequential"
