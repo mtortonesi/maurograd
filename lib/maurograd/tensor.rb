@@ -1,5 +1,4 @@
 require "numo/narray"
-require "set"
 
 require_relative "backends"
 require_relative "backends/cpu"

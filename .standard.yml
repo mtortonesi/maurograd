@@ -3,10 +3,9 @@
 # These are the exceptions we actually need.
 
 # Match the gemspec's required_ruby_version. Without this, Standard infers
-# the target Ruby from whatever's running it locally, which on a newer Ruby
-# incorrectly flags `require 'set'` in tensor.rb as redundant - Set only
-# became auto-loaded starting in Ruby 3.2, and we still support 3.0/3.1.
-ruby_version: 3.0
+# the target Ruby from whatever's running it locally, and could suggest
+# syntax the oldest supported Ruby doesn't have.
+ruby_version: 3.3
 
 ignore:
   - "test/**/*":

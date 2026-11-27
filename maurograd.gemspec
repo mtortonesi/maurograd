@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   DESC
   spec.homepage = "https://github.com/mtortonesi/maurograd"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.2"
+  spec.required_ruby_version = ">= 3.3"
 
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
