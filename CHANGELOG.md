@@ -7,6 +7,8 @@ All notable changes to Maurograd are documented here. The project follows
 The `maurograd` and `maurograd-mlx` gems are released together, at the same
 version.
 
+## [Unreleased]
+
 ## [0.1.0] - 2026-11-27
 
 First public release.
@@ -46,4 +48,5 @@ First public release.
   saving/loading yet.
 - No pure-Ruby fallback: the C extension must build.
 
+[Unreleased]: https://github.com/mtortonesi/maurograd/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/mtortonesi/maurograd/releases/tag/v0.1.0
