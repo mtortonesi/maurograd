@@ -84,6 +84,19 @@ class ResidualBlock < Maurograd::Layers::Module
 end
 ```
 
+To save a trained model and load it back later, use its `state_dict`,
+written in the [safetensors](https://github.com/huggingface/safetensors)
+format (readable from Python too):
+
+```ruby
+Maurograd::SafeTensors.save(model.state_dict, "model.safetensors")
+model.load_state_dict(Maurograd::SafeTensors.load("model.safetensors"))
+```
+
+Wrap evaluation and sampling in `Maurograd.no_grad { ... }`, so that no
+graph is recorded, and call `model.eval` first, so that Dropout and
+BatchNorm behave as at inference time.
+
 (An MLP classifier for the two moons dataset also exists, but it's built on
 the scalar-valued engine, so it now lives in
 [maurograd_scalar](https://github.com/mtortonesi/maurograd_scalar) instead.)

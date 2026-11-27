@@ -28,11 +28,20 @@ version.
 - `Maurograd.no_grad { ... }`: ops inside the block build no graph (for
   evaluation and sampling); `Maurograd.grad_enabled?`. Per thread,
   nestable, and separate from `model.eval`.
+- `Module#state_dict` and `#load_state_dict` (strict by default; keys and
+  shapes are checked before anything changes), and buffers: non-trainable
+  state declared with `buffers :name`, which `to` moves and `state_dict`
+  saves, as BatchNorm2D's running statistics now are.
+- `Maurograd::SafeTensors.save` and `.load`, for the safetensors file
+  format: weights saved by Maurograd load in Python's safetensors package,
+  and the other way round, and loading a file can't run code.
 
 ### Changed
 
 - Every built-in layer, and `Sequential`, is now a `Layers::Module`.
   Parameter order is unchanged.
+- `BatchNorm2D` no longer overrides `to`; its running statistics are
+  buffers.
 - `Sequential.new` raises `TypeError` for a layer that isn't a
   `Layers::Module`, instead of silently skipping its parameters.
 

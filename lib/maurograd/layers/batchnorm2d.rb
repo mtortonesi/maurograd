@@ -15,10 +15,14 @@ module Maurograd
     # statistics, not parameters trained by gradient descent, so they must
     # NOT appear in #parameters (Optim::SGD#step would otherwise try to
     # update them with a gradient they don't have); Module only collects
-    # Tensors, so they don't. In training mode, forward replaces them with
+    # Tensors, so they don't. They are declared as buffers instead, which
+    # #to and #state_dict handle. In training mode, forward replaces them with
     # their updated values.
     #
     class BatchNorm2D < Module
+      # Moved by #to and saved by #state_dict with the parameters.
+      buffers :running_mean, :running_var
+
       attr_accessor :gamma, :beta, :running_mean, :running_var, :momentum, :eps
 
       def initialize(num_features, momentum: 0.1, eps: 1e-5)
@@ -40,19 +44,6 @@ module Maurograd
           momentum: @momentum,
           eps: @eps
         )
-      end
-
-      # Moves parameters (Module#to) and running statistics, which are
-      # native arrays rather than Tensors, to another backend.
-      def to(backend)
-        source = @gamma.backend
-        super
-        target = @gamma.backend
-        return self if target.equal?(source)
-
-        @running_mean = target.from(source.to_numo(@running_mean))
-        @running_var = target.from(source.to_numo(@running_var))
-        self
       end
     end
   end

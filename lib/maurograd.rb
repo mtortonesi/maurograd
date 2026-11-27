@@ -80,6 +80,9 @@ module Maurograd
   require_relative "maurograd/optim/adam"
 
   # Datasets
+  # Saving and loading weights (safetensors format).
+  require_relative "maurograd/safetensors"
+
   require_relative "maurograd/datasets/mnist"
   require_relative "maurograd/datasets/batching"
 end

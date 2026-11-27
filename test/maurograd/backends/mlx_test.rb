@@ -250,6 +250,26 @@ describe "MLX backend" do
     expect_match(*results)
   end
 
+  it "saves state on MLX and loads it on CPU, and the other way round" do
+    Maurograd.seed!(22)
+    x = randn(4, 2, 5, 5)
+    build = lambda do |seed|
+      Maurograd.seed!(seed)
+      Maurograd::Layers::Sequential.new(Maurograd::Layers::Conv2D.new(2, 3, 3), Maurograd::Layers::BatchNorm2D.new(3))
+    end
+
+    on_mlx = build.call(23).to(:mlx)
+    on_mlx.call(Maurograd::Tensor.new(x, backend: :mlx)) # running statistics move off their initial values
+    on_cpu = build.call(24).load_state_dict(on_mlx.state_dict)
+    expect(on_cpu.state_dict.keys).to be == on_mlx.state_dict.keys
+    expect_match(on_cpu.state_dict.values, on_mlx.state_dict.values, tol: 1e-6)
+    expect(on_cpu.layers[1].running_mean.class).to be == Numo::SFloat
+
+    back = build.call(25).to(:mlx).load_state_dict(on_cpu.state_dict)
+    expect_match([on_cpu.eval.call(Maurograd::Tensor.new(x)).to_numo],
+      [back.eval.call(Maurograd::Tensor.new(x, backend: :mlx)).to_numo])
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand
