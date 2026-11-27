@@ -18,7 +18,8 @@ jobs:
           - { os: ubuntu-latest, ruby: "3.3" }
           - { os: ubuntu-latest, ruby: "3.4" }
           - { os: ubuntu-latest, ruby: "4.0", lint: true }
-          - { os: macos-latest, ruby: "4.0" }
+          # macOS also runs the MLX tests, which require mlx-c.
+          - { os: macos-latest, ruby: "4.0", mlx: true }
     runs-on: ${{ matrix.os }}
     env:
       # Skip bench-only (torch-rb) and examples-only (chunky_png, erv, csv)
@@ -38,6 +39,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libopenblas-dev
 
+      # bin/build_ext then builds ext/maurograd_mlx too.
+      - name: Install mlx-c
+        if: matrix.mlx
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: brew install mlx-c
+
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
@@ -52,6 +60,10 @@ jobs:
         run: bundle exec bake lint
 
       - name: Build extension and run test suite
+        env:
+          # Where MLX is installed, its tests must run: fail rather than skip
+          # if the backend doesn't build or load.
+          MAUROGRAD_REQUIRE_MLX: ${{ matrix.mlx && '1' || '' }}
         run: bundle exec bake ci
 
   # Builds the gems, installs them outside the checkout and trains a few
@@ -97,13 +109,9 @@ jobs:
           gem install --no-document pkg/maurograd-[0-9]*.gem
           cd "$RUNNER_TEMP" && ruby "$GITHUB_WORKSPACE/script/smoke_installed_gem.rb" cpu
 
-  # The same for maurograd-mlx, which needs mlx-c from Homebrew. Non-blocking
-  # for now: GitHub's macOS runners are virtual machines, and whether MLX
-  # works there (on the paravirtualized GPU, or falling back to its CPU
-  # device) is unverified. Drop continue-on-error once it has passed reliably.
+  # The same for maurograd-mlx, which needs mlx-c from Homebrew.
   package-mlx:
     runs-on: macos-latest
-    continue-on-error: true
     env:
       BUNDLE_WITHOUT: bench:examples
 

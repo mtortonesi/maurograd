@@ -11,12 +11,14 @@ describe "MLX backend" do
     false
   end
 
-  # Skip every test here where the MLX backend can't be loaded (e.g. on CI,
-  # which has no mlx-c). Done in `around`, not `before`: sus runs `before`
-  # outside the catch(:skip) that wraps the test body, so calling skip there
-  # escapes as an UncaughtThrowError.
+  # Skip every test here where the MLX backend can't be loaded (e.g. on
+  # Linux, or without mlx-c). MAUROGRAD_REQUIRE_MLX=1 turns the skip into
+  # failures, for CI jobs that are meant to test MLX: there, a backend that
+  # fails to build or load must not pass as 18 skips. Done in `around`, not
+  # `before`: sus runs `before` outside the catch(:skip) that wraps the test
+  # body, so calling skip there escapes as an UncaughtThrowError.
   def around(&block)
-    return super if mlx_available?
+    return super if ENV["MAUROGRAD_REQUIRE_MLX"] == "1" || mlx_available?
 
     @__assertions__.skip("MLX backend not available")
   end
