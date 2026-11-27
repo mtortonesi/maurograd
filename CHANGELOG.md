@@ -7,7 +7,7 @@ All notable changes to Maurograd are documented here. The project follows
 The `maurograd` and `maurograd-mlx` gems are released together, at the same
 version.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-11-27
 
 First public release.
 
