@@ -15,6 +15,7 @@ require_relative "ops/flatten"
 require_relative "ops/relu"
 require_relative "ops/maxpool2d"
 require_relative "ops/permute"
+require_relative "ops/reshape"
 
 module Maurograd
   # Tensor is the core data structure of Maurograd.
@@ -262,6 +263,18 @@ module Maurograd
 
     def flatten
       Ops::Flatten.apply(self)
+    end
+
+    # Same elements in the same (row-major) order, in a new shape:
+    # reshape(6, 4), reshape([6, 4]), or reshape(2, -1) to infer one
+    # dimension. The element count must not change.
+    #
+    # An autograd op (Ops::Reshape). It regroups elements and never moves
+    # them, so it is not a substitute for permute/transpose: [2, 3] ->
+    # [3, 2] by reshape is not the transposed matrix.
+    def reshape(*shape)
+      shape = shape.first if shape.length == 1 && shape.first.is_a?(Array)
+      Ops::Reshape.apply(self, shape)
     end
 
     def relu

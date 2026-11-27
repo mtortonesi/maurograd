@@ -9,6 +9,11 @@ version.
 
 ## [Unreleased]
 
+### Added
+
+- `Tensor#reshape` (`Ops::Reshape`), differentiable, with one dimension
+  inferable as `-1`, e.g. `x.reshape(n, -1)`.
+
 ## [0.1.0] - 2026-11-27
 
 First public release.
