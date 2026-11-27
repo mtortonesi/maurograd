@@ -100,7 +100,7 @@ module Maurograd
         # ctx (cached for backward) holds x_hat and inv_std. In training
         # mode inv_std comes from the *batch* statistics; in eval mode from
         # the running ones (fixed constants, hence no dvar/dmu term there).
-        requires_grad = @inputs.any?(&:requires_grad)
+        requires_grad = Ops.requires_grad?(*@inputs)
         @ctx = nil unless requires_grad
 
         out = Tensor.new(y, requires_grad: requires_grad, backend: bk)

@@ -18,7 +18,7 @@ module Maurograd
         @backend = Ops.backend_of(a, b)
         result_data = a.data + b.data
 
-        requires_grad = a.requires_grad || b.requires_grad
+        requires_grad = Ops.requires_grad?(a, b)
 
         result = Tensor.new(result_data, requires_grad: requires_grad, backend: @inputs.first.backend)
         result.creator = self if requires_grad

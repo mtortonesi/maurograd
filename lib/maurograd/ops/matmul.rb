@@ -32,7 +32,7 @@ module Maurograd
         result_data = @backend.matmul(a.data, b.data)
 
         # The output requires the gradient if at least one of the inputs requires it.
-        requires_grad = a.requires_grad || b.requires_grad
+        requires_grad = Ops.requires_grad?(a, b)
         result = Tensor.new(result_data, requires_grad: requires_grad, backend: @inputs.first.backend)
 
         # We set the creator ONLY if it is needed for backward

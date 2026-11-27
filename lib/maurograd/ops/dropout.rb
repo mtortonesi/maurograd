@@ -64,7 +64,7 @@ module Maurograd
 
         y = input.data * @mask
 
-        requires_grad = input.requires_grad
+        requires_grad = Ops.requires_grad?(input)
         out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out

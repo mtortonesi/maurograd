@@ -64,7 +64,7 @@ module Maurograd
           bk.sum(tensor.data, axis: @axes, keepdims: @keepdims)
         end
 
-        requires_grad = tensor.requires_grad
+        requires_grad = Ops.requires_grad?(tensor)
         result = Tensor.new(result_data, requires_grad: requires_grad, backend: bk)
 
         result.creator = self if requires_grad

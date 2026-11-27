@@ -68,7 +68,7 @@ module Maurograd
         # logical row-major order, so no explicit copy is needed here.
         y = input.backend.reshape(input.data, *@shape)
 
-        requires_grad = input.requires_grad
+        requires_grad = Ops.requires_grad?(input)
         out = Tensor.new(y, requires_grad: requires_grad, backend: input.backend)
         out.creator = self if requires_grad
         out

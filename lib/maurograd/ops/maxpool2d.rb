@@ -67,7 +67,7 @@ module Maurograd
 
         y, ctx = input.backend.maxpool2d_forward(input.data, @kernel_h, @kernel_w, @stride, @padding)
 
-        requires_grad = input.requires_grad
+        requires_grad = Ops.requires_grad?(input)
         @ctx = ctx if requires_grad
 
         out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)

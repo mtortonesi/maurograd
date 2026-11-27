@@ -88,7 +88,7 @@ module Maurograd
         @target = @is_indices ? bk.one_hot(t, @c) : t # [N,C]
         loss_data = -bk.sum(@target * log_probs) / @n.to_f
 
-        requires_grad = logits.requires_grad || target.requires_grad
+        requires_grad = Ops.requires_grad?(logits, target)
         out = Tensor.new(loss_data, requires_grad: requires_grad, backend: bk)
         out.creator = self if requires_grad
         out

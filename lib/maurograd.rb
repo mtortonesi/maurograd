@@ -21,6 +21,9 @@ module Maurograd
   # Maurograd.debug flag, off by default (used by Utils.assert_finite!).
   require_relative "maurograd/debug"
 
+  # Maurograd.no_grad { ... }: switches gradient recording off.
+  require_relative "maurograd/grad_mode"
+
   # Maurograd.seed! for reproducible runs (also re-randomizes Numo's global
   # RNG at load time, so unseeded weight init is genuinely random).
   require_relative "maurograd/seed"

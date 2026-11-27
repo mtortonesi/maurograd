@@ -76,7 +76,7 @@ module Maurograd
 
         out_data, @ctx = @backend.conv2d_forward(input.data, weight.data, bias&.data, @stride, @padding)
 
-        requires_grad = @inputs.any?(&:requires_grad)
+        requires_grad = Ops.requires_grad?(*@inputs)
         @ctx = nil unless requires_grad
 
         out = Tensor.new(out_data, requires_grad: requires_grad, backend: @backend)

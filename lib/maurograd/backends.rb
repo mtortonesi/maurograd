@@ -1,3 +1,5 @@
+require_relative "grad_mode"
+
 module Maurograd
   # Compute backends: where tensor data lives and which code runs the math.
   #
@@ -96,6 +98,13 @@ module Maurograd
           "in one operation; move them with Tensor#to first"
       end
       backend
+    end
+
+    # Whether an op's output must be recorded for backward: some input
+    # requires grad (nils ignored), and recording isn't switched off by
+    # Maurograd.no_grad. Every op decides through this one method.
+    def self.requires_grad?(*tensors)
+      Maurograd.grad_enabled? && tensors.any? { |t| t&.requires_grad }
     end
   end
 

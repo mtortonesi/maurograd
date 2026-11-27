@@ -29,7 +29,7 @@ module Maurograd
         input = @inputs.first
         y, ctx = input.backend.relu_forward(input.data)
 
-        requires_grad = input.requires_grad
+        requires_grad = Ops.requires_grad?(input)
         @ctx = ctx if requires_grad
 
         out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)

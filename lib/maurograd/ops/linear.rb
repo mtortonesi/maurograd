@@ -72,7 +72,7 @@ module Maurograd
           y += bk.reshape(bias.data, 1, w.shape[0])
         end
 
-        requires_grad = @inputs.any?(&:requires_grad)
+        requires_grad = Ops.requires_grad?(*@inputs)
         out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out

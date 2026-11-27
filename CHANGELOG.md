@@ -25,6 +25,9 @@ version.
   them, negative counting from the end) and `keepdims:`; e.g.
   `x.mean(axis: [2, 3])` is global average pooling.
 - `Tensor#/` (by a number or a tensor) and unary minus.
+- `Maurograd.no_grad { ... }`: ops inside the block build no graph (for
+  evaluation and sampling); `Maurograd.grad_enabled?`. Per thread,
+  nestable, and separate from `model.eval`.
 
 ### Changed
 

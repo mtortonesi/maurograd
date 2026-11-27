@@ -22,7 +22,7 @@ module Maurograd
         tensor = @inputs.first
         result_data = tensor.data**@exponent
 
-        requires_grad = tensor.requires_grad
+        requires_grad = Ops.requires_grad?(tensor)
         result = Tensor.new(result_data, requires_grad: requires_grad, backend: @inputs.first.backend)
 
         result.creator = self if requires_grad

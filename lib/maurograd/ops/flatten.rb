@@ -37,7 +37,7 @@ module Maurograd
         flat_dim = input.size / n
         y = input.backend.reshape(x, n, flat_dim)
 
-        requires_grad = @inputs.first.requires_grad
+        requires_grad = Ops.requires_grad?(@inputs.first)
         out = Tensor.new(y, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out

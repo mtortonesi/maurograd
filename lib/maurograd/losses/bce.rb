@@ -53,7 +53,7 @@ module Maurograd
         @n_elems = term1.size
         loss_data = -bk.sum(term1 + term2) / @n_elems.to_f
 
-        requires_grad = pred.requires_grad || target.requires_grad
+        requires_grad = Ops.requires_grad?(pred, target)
         out = Tensor.new(loss_data, requires_grad: requires_grad, backend: @inputs.first.backend)
         out.creator = self if requires_grad
         out
