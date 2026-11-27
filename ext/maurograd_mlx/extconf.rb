@@ -10,14 +10,14 @@ extension_name = "maurograd_mlx"
 # Numo NArray headers (same lookup as maurograd_ext).
 begin
   spec = Gem::Specification.find_by_name("numo-narray-alt")
-rescue Gem::LoadError
-  abort "numo-narray-alt gem not found (is it in your Gemfile and bundle install done?)"
+rescue Gem::LoadError => e
+  abort "numo-narray-alt not found, and its headers are needed to compile (#{e.class}: #{e.message}; gem search path: #{Gem.path.join(File::PATH_SEPARATOR)})"
 end
 hdr = Dir[File.join(spec.full_gem_path, "**", "numo", "narray.h")].then do |c|
   c.find { |p| p.include?("/ext/") } || c.first
 end
 abort "Could not locate numo/narray.h inside #{spec.full_gem_path}" unless hdr
-$INCFLAGS << " -I#{File.dirname(File.dirname(hdr))}"
+$INCFLAGS << " -I#{File.dirname(hdr, 2)}"
 have_header("numo/narray.h") or abort "numo/narray.h not found even after adding include path"
 
 # mlx-c: MLX_C_DIR=<prefix> selects it explicitly; otherwise ask Homebrew.

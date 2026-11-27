@@ -14,8 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Every supported Ruby (gemspec: >= 3.2) on Linux, the latest on macOS.
-          - { os: ubuntu-latest, ruby: "3.2" }
+          # Every supported Ruby (gemspec: >= 3.3) on Linux, the latest on macOS.
           - { os: ubuntu-latest, ruby: "3.3" }
           - { os: ubuntu-latest, ruby: "3.4" }
           - { os: ubuntu-latest, ruby: "4.0", lint: true }
@@ -43,6 +42,10 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+          # Bump to discard cached bundles. 2: the macOS cache held a
+          # numo-linalg-alt built against Homebrew's libgfortran, from when
+          # this workflow installed Homebrew's openblas (which pulls in gcc).
+          cache-version: 2
 
       - name: Lint
         if: matrix.lint
@@ -77,18 +80,21 @@ jobs:
         with:
           ruby-version: "4.0"
           bundler-cache: true
+          # Bump to discard cached bundles. 2: the macOS cache held a
+          # numo-linalg-alt built against Homebrew's libgfortran, from when
+          # this workflow installed Homebrew's openblas (which pulls in gcc).
+          cache-version: 2
 
       - name: Build the gems
         run: bundle exec bake package
 
       - name: Install maurograd and run the smoke test outside the checkout
         run: |
-          # Reuse the Numo gems Bundler already installed (numo-linalg-alt
-          # takes minutes to build), but install maurograd into a fresh
-          # directory so the test sees only the packaged files.
-          deps="$(bundle exec ruby -e 'print Gem.loaded_specs["numo-narray-alt"].base_dir')"
-          export GEM_HOME="$RUNNER_TEMP/gems" GEM_PATH="$RUNNER_TEMP/gems:$deps"
-          gem install --local --no-document pkg/maurograd-[0-9]*.gem
+          # Into an empty gem directory, with the dependencies from
+          # rubygems.org, as a user would get them (numo-linalg-alt takes a
+          # few minutes to build).
+          export GEM_HOME="$RUNNER_TEMP/gems" GEM_PATH="$RUNNER_TEMP/gems"
+          gem install --no-document pkg/maurograd-[0-9]*.gem
           cd "$RUNNER_TEMP" && ruby "$GITHUB_WORKSPACE/script/smoke_installed_gem.rb" cpu
 
   # The same for maurograd-mlx, which needs mlx-c from Homebrew. Non-blocking
@@ -113,13 +119,19 @@ jobs:
         with:
           ruby-version: "4.0"
           bundler-cache: true
+          # Bump to discard cached bundles. 2: the macOS cache held a
+          # numo-linalg-alt built against Homebrew's libgfortran, from when
+          # this workflow installed Homebrew's openblas (which pulls in gcc).
+          cache-version: 2
 
       - name: Build the gems
         run: bundle exec bake package
 
       - name: Install both gems and run the smoke test on MLX
         run: |
-          deps="$(bundle exec ruby -e 'print Gem.loaded_specs["numo-narray-alt"].base_dir')"
-          export GEM_HOME="$RUNNER_TEMP/gems" GEM_PATH="$RUNNER_TEMP/gems:$deps"
-          gem install --local --no-document pkg/maurograd-[0-9]*.gem pkg/maurograd-mlx-*.gem
+          export GEM_HOME="$RUNNER_TEMP/gems" GEM_PATH="$RUNNER_TEMP/gems"
+          # maurograd first: maurograd-mlx's dependency on it must then be
+          # satisfied by the installed copy, not looked up on rubygems.org.
+          gem install --no-document pkg/maurograd-[0-9]*.gem
+          gem install --no-document pkg/maurograd-mlx-*.gem
           cd "$RUNNER_TEMP" && ruby "$GITHUB_WORKSPACE/script/smoke_installed_gem.rb" mlx
