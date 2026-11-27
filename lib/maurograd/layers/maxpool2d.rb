@@ -1,8 +1,9 @@
 require_relative "../ops/maxpool2d"
+require_relative "module"
 
 module Maurograd
   module Layers
-    class MaxPool2D
+    class MaxPool2D < Module
       def initialize(kernel_size, stride: nil, padding: 0)
         @kh, @kw = kernel_size.is_a?(Integer) ? [kernel_size, kernel_size] : kernel_size
         @stride = stride || @kh

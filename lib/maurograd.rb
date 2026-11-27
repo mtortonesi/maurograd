@@ -53,6 +53,7 @@ module Maurograd
   require_relative "maurograd/ops/dropout"
 
   # Layers (high-level modules that own parameters).
+  require_relative "maurograd/layers/module"
   require_relative "maurograd/layers/conv2d"
   require_relative "maurograd/layers/linear"
   require_relative "maurograd/layers/flatten"

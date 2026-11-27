@@ -1,6 +1,7 @@
 require_relative "../tensor"
 require_relative "../ops/linear"
 require_relative "../utils/utils"
+require_relative "module"
 
 module Maurograd
   module Layers
@@ -11,7 +12,7 @@ module Maurograd
     # - bias:    [Out]
     #
     # Delegates actual computation + autograd logic to Ops::Linear.
-    class Linear
+    class Linear < Module
       attr_accessor :weights, :bias
 
       # - seed: optional seed for reproducible weight initialization.
@@ -36,18 +37,6 @@ module Maurograd
 
       def forward(input)
         Maurograd::Ops::Linear.apply(input, @weights, @bias)
-      end
-
-      # Moves the parameters to another backend (see Tensor#to).
-      def to(backend)
-        parameters.each { |p| p.to(backend) }
-        self
-      end
-
-      def parameters
-        ps = [@weights]
-        ps << @bias if @bias
-        ps
       end
     end
   end

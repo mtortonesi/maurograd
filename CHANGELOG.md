@@ -13,6 +13,18 @@ version.
 
 - `Tensor#reshape` (`Ops::Reshape`), differentiable, with one dimension
   inferable as `-1`, e.g. `x.reshape(n, -1)`.
+- `Layers::Module`, a base class for layers and models: it finds
+  parameters and sublayers in instance variables (also inside Arrays and
+  Hashes), and provides `parameters`, `named_parameters`, `children`,
+  `modules`, `train`/`eval`/`training?`, `to`, `call` (so `model.call(x)`
+  works like `forward`) and a short `inspect`. Shared parameters are listed once.
+
+### Changed
+
+- Every built-in layer, and `Sequential`, is now a `Layers::Module`.
+  Parameter order is unchanged.
+- `Sequential.new` raises `TypeError` for a layer that isn't a
+  `Layers::Module`, instead of silently skipping its parameters.
 
 ## [0.1.0] - 2026-11-27
 

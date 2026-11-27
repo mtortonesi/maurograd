@@ -1,4 +1,5 @@
 require_relative "../ops/dropout"
+require_relative "module"
 
 module Maurograd
   module Layers
@@ -9,32 +10,17 @@ module Maurograd
     # Delegates the actual work to Ops::Dropout.
     #
     # Like PyTorch, a freshly constructed layer is in training mode: call
-    # #eval (usually via Sequential#eval) before evaluating a model.
-    class Dropout
+    # #eval (usually on the whole model) before evaluating it.
+    class Dropout < Module
       attr_reader :p
 
       def initialize(p = 0.5)
         Maurograd::Ops::Dropout.validate_p!(p)
         @p = p
-        @training = true
       end
 
       def forward(input)
-        Maurograd::Ops::Dropout.apply(input, p: @p, training: @training)
-      end
-
-      def train
-        @training = true
-        self
-      end
-
-      def eval
-        @training = false
-        self
-      end
-
-      def training?
-        @training
+        Maurograd::Ops::Dropout.apply(input, p: @p, training: training?)
       end
     end
   end

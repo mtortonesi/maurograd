@@ -1,5 +1,6 @@
 require_relative "../tensor"
 require_relative "../ops/batchnorm2d"
+require_relative "module"
 
 module Maurograd
   module Layers
@@ -13,16 +14,16 @@ module Maurograd
     # backend (Numo::SFloat on the CPU backend), not Tensors: they are
     # statistics, not parameters trained by gradient descent, so they must
     # NOT appear in #parameters (Optim::SGD#step would otherwise try to
-    # update them with a gradient they don't have). In training mode,
-    # forward replaces them with their updated values.
+    # update them with a gradient they don't have); Module only collects
+    # Tensors, so they don't. In training mode, forward replaces them with
+    # their updated values.
     #
-    class BatchNorm2D
+    class BatchNorm2D < Module
       attr_accessor :gamma, :beta, :running_mean, :running_var, :momentum, :eps
 
       def initialize(num_features, momentum: 0.1, eps: 1e-5)
         @momentum = momentum
         @eps = eps
-        @training = true
 
         @gamma = Maurograd::Tensor.new(Numo::SFloat.ones(num_features), requires_grad: true)
         @beta = Maurograd::Tensor.new(Numo::SFloat.zeros(num_features), requires_grad: true)
@@ -35,33 +36,22 @@ module Maurograd
         Maurograd::Ops::BatchNorm2D.apply(
           input, @gamma, @beta,
           stats: self,
-          training: @training,
+          training: training?,
           momentum: @momentum,
           eps: @eps
         )
       end
 
-      def parameters
-        [@gamma, @beta]
-      end
-
-      # Moves parameters and running statistics to another backend.
+      # Moves parameters (Module#to) and running statistics, which are
+      # native arrays rather than Tensors, to another backend.
       def to(backend)
         source = @gamma.backend
-        parameters.each { |p| p.to(backend) }
+        super
         target = @gamma.backend
+        return self if target.equal?(source)
+
         @running_mean = target.from(source.to_numo(@running_mean))
         @running_var = target.from(source.to_numo(@running_var))
-        self
-      end
-
-      def train
-        @training = true
-        self
-      end
-
-      def eval
-        @training = false
         self
       end
     end

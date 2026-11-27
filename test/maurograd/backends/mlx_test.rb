@@ -207,6 +207,33 @@ describe "MLX backend" do
     expect((y[y.ne(0)] - 1.0 / 0.7).abs.max).to be < 1e-5
   end
 
+  it "moves a custom Module, nested BatchNorm2D statistics included, with to(:mlx)" do
+    Maurograd.seed!(18)
+    x = randn(4, 3, 6, 6)
+    block_class = Class.new(Maurograd::Layers::Module) do
+      def initialize
+        @convs = [Maurograd::Layers::Conv2D.new(3, 3, 3, padding: 1), Maurograd::Layers::Conv2D.new(3, 3, 3, padding: 1)]
+        @bn = Maurograd::Layers::BatchNorm2D.new(3)
+      end
+
+      def forward(x)
+        x + @convs[1].call(@bn.call(@convs[0].call(x)).relu)
+      end
+    end
+
+    results = %i[cpu mlx].map do |b|
+      Maurograd.seed!(19) # same weights on both backends
+      block = block_class.new.to(b)
+      block.call(Maurograd::Tensor.new(x, backend: b)) # updates the running statistics
+      bn = block.instance_variable_get(:@bn)
+      expect(bn.running_mean.class).to be == Maurograd::Backends.fetch(b).from(Numo::SFloat[0]).class
+      out = block.eval.call(Maurograd::Tensor.new(x, backend: b))
+      [out.to_numo, bn.gamma.backend.to_numo(bn.running_var)]
+    end
+
+    expect_match(*results)
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand

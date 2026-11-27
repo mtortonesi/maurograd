@@ -66,6 +66,24 @@ framework:
   every `Conv2D` - so you can see what BatchNorm actually changes about
   training, rather than just reading about it.
 
+Models with more than a chain of layers subclass `Layers::Module`: keep
+layers and parameters in instance variables and write `forward`, and
+`parameters`, `train`/`eval` and `to` work with no further code. A
+residual block, for instance:
+
+```ruby
+class ResidualBlock < Maurograd::Layers::Module
+  def initialize(channels)
+    @conv1 = Maurograd::Layers::Conv2D.new(channels, channels, 3, padding: 1)
+    @conv2 = Maurograd::Layers::Conv2D.new(channels, channels, 3, padding: 1)
+  end
+
+  def forward(x)
+    x + @conv2.call(@conv1.call(x).relu)
+  end
+end
+```
+
 (An MLP classifier for the two moons dataset also exists, but it's built on
 the scalar-valued engine, so it now lives in
 [maurograd_scalar](https://github.com/mtortonesi/maurograd_scalar) instead.)

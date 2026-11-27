@@ -1,6 +1,7 @@
 require_relative "../tensor"
 require_relative "../ops/conv2d"
 require_relative "../utils/utils"
+require_relative "module"
 
 module Maurograd
   module Layers
@@ -26,7 +27,7 @@ module Maurograd
     # - nn.Conv2d   -> Layer (parameters + forward interface)
     # - aten/ops    -> low-level operations used by autograd
     #
-    class Conv2D
+    class Conv2D < Module
       attr_accessor :weights, :bias, :stride, :padding
 
       # Create a 2D convolutional layer.
@@ -119,16 +120,6 @@ module Maurograd
       #
       def forward(input)
         Maurograd::Ops::Conv2D.apply(input, @weights, @bias, @stride, @padding)
-      end
-
-      # Moves the parameters to another backend (see Tensor#to).
-      def to(backend)
-        parameters.each { |p| p.to(backend) }
-        self
-      end
-
-      def parameters
-        [@weights, @bias]
       end
     end
   end
