@@ -36,6 +36,9 @@ module Maurograd
   # Core tensor type (autograd graph node).
   require_relative "maurograd/tensor"
 
+  # Maurograd.randn / .rand: random tensors drawn on their backend.
+  require_relative "maurograd/random"
+
   # Utilities used by multiple ops (broadcast reduction, im2col/col2im, etc.).
   require_relative "maurograd/utils/utils"
 

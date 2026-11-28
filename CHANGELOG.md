@@ -53,6 +53,9 @@ version.
 - `Losses::BCEWithLogits` (`reduction: :mean` or `:sum`): binary
   cross-entropy on logits, finite and with a full gradient even for
   confident wrong predictions.
+- `Maurograd.randn`, `.rand`, `.randn_like` and `.rand_like`: random
+  tensors drawn by their backend (on the GPU for MLX), seeded by
+  `Maurograd.seed!`.
 - Backend methods `slice`, `pad`, `concat`, `normal`, `uniform`, `log1p`,
   `abs`, `maximum`, `minimum`, `greater` and `greater_equal`, on the CPU
   and MLX backends.

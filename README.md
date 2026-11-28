@@ -97,6 +97,19 @@ Wrap evaluation and sampling in `Maurograd.no_grad { ... }`, so that no
 graph is recorded, and call `model.eval` first, so that Dropout and
 BatchNorm behave as at inference time.
 
+Besides arithmetic and the layers, tensors have differentiable elementwise
+functions (`exp`, `log`, `sigmoid`, `tanh`, `silu`, `softplus`,
+`log_sigmoid`, `leaky_relu`, `clamp`), reductions (`sum` and `mean` over
+any axes, `logsumexp`, `log_softmax`, `softmax`), and ways to cut and join
+them (`slice`, `chunk`, `Maurograd.concat`). `Maurograd.randn` and
+`Maurograd.rand` draw random tensors on their backend, and `detach` cuts a
+tensor off the graph. For instance, a VAE's reparameterization trick:
+
+```ruby
+mean, log_var = encoder.call(x).chunk(2, axis: 1)
+z = mean + (log_var * 0.5).exp * Maurograd.randn_like(mean)
+```
+
 (An MLP classifier for the two moons dataset also exists, but it's built on
 the scalar-valued engine, so it now lives in
 [maurograd_scalar](https://github.com/mtortonesi/maurograd_scalar) instead.)

@@ -302,6 +302,24 @@ describe "MLX backend" do
     expect_match(cpu, mlx, tol: 1e-5)
   end
 
+  it "draws random tensors on the MLX backend, reproducibly" do
+    Maurograd.seed!(30)
+    n = Maurograd.randn(20_000, backend: :mlx)
+    u = Maurograd.rand(4, 5000, backend: :mlx)
+    expect(n.backend.name).to be == :mlx
+    expect(u.shape).to be == [4, 5000]
+
+    host = n.to_numo
+    expect(host.mean.abs).to be < 0.03
+    expect((host.stddev - 1).abs).to be < 0.03
+    expect(u.to_numo.min).to be >= 0
+    expect(u.to_numo.max).to be < 1
+
+    Maurograd.seed!(30)
+    expect(Maurograd.randn(20_000, backend: :mlx).to_numo).to be == host
+    expect(Maurograd.randn_like(u).backend.name).to be == :mlx
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand
