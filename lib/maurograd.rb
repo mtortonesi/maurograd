@@ -74,6 +74,7 @@ module Maurograd
 
   # Loss functions
   require_relative "maurograd/losses/bce"
+  require_relative "maurograd/losses/bce_with_logits"
   require_relative "maurograd/losses/mse"
   require_relative "maurograd/losses/cross_entropy_with_logits"
 

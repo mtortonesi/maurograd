@@ -294,6 +294,14 @@ describe "MLX backend" do
     expect_match(cpu, mlx, tol: 1e-5)
   end
 
+  it "matches CPU for BCEWithLogits" do
+    Maurograd.seed!(29)
+    cpu, mlx = on_both(randn(4, 6) * 3.0, Numo::SFloat.new(4, 6).rand) do |z, y|
+      Maurograd::Losses::BCEWithLogits.apply(z, y)
+    end
+    expect_match(cpu, mlx, tol: 1e-5)
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand

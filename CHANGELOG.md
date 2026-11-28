@@ -50,6 +50,9 @@ version.
   `Tensor#log_softmax(axis:)` (`Ops::LogSoftmax`) and `Tensor#softmax`,
   computed with the maximum subtracted first, so they stay finite for
   logits in the thousands.
+- `Losses::BCEWithLogits` (`reduction: :mean` or `:sum`): binary
+  cross-entropy on logits, finite and with a full gradient even for
+  confident wrong predictions.
 - Backend methods `slice`, `pad`, `concat`, `normal`, `uniform`, `log1p`,
   `abs`, `maximum`, `minimum`, `greater` and `greater_equal`, on the CPU
   and MLX backends.
