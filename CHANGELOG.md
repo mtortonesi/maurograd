@@ -35,6 +35,14 @@ version.
 - `Maurograd::SafeTensors.save` and `.load`, for the safetensors file
   format: weights saved by Maurograd load in Python's safetensors package,
   and the other way round, and loading a file can't run code.
+- `Tensor#slice(axis, range)` (`Ops::Slice`), with any Ruby Range
+  (`0...4`, `4..`, `-2..`), and `Tensor#chunk(n, axis:)` to split a tensor
+  into equal parts, e.g. a VAE encoder's output into mean and log-variance.
+- `Maurograd.concat(tensors, axis:)` (`Ops::Concat`), e.g. for the skip
+  connections of a UNet.
+- Backend methods `slice`, `pad`, `concat`, `normal`, `uniform`, `log1p`,
+  `abs`, `maximum`, `minimum`, `greater` and `greater_equal`, on the CPU
+  and MLX backends.
 
 ### Changed
 

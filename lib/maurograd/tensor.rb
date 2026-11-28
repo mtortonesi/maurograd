@@ -17,6 +17,8 @@ require_relative "ops/maxpool2d"
 require_relative "ops/permute"
 require_relative "ops/reshape"
 require_relative "ops/elementwise"
+require_relative "ops/slice"
+require_relative "ops/concat"
 
 module Maurograd
   # Tensor is the core data structure of Maurograd.
@@ -312,6 +314,26 @@ module Maurograd
     def reshape(*shape)
       shape = shape.first if shape.length == 1 && shape.first.is_a?(Array)
       Ops::Reshape.apply(self, shape)
+    end
+
+    # The elements in `range` along `axis` (Ops::Slice): x.slice(1, 0...4)
+    # is x[:, 0:4] in NumPy. Any Ruby Range works, including negative and
+    # endless ones: x.slice(-1, -2..) is the last two along the last axis.
+    def slice(axis, range)
+      Ops::Slice.apply(self, axis, range)
+    end
+
+    # Splits the tensor into `n` parts along `axis`, as consecutive slices
+    # of equal size (the last one smaller if the size isn't a multiple of
+    # n, so there may be fewer than n parts, as in PyTorch):
+    #
+    #   mean, log_var = encoder.call(x).chunk(2, axis: 1)
+    def chunk(n, axis: 0)
+      raise ArgumentError, "chunk needs a positive number of parts, got #{n.inspect}" unless n.is_a?(Integer) && n.positive?
+
+      axis = Ops::Sum.normalize_axes(axis, ndim).first
+      step = (shape[axis] + n - 1) / n
+      (0...shape[axis]).step(step).map { |start| slice(axis, start...(start + step)) }
     end
 
     def relu

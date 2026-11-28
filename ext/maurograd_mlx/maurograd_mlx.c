@@ -320,6 +320,33 @@ static VALUE mlx_seed_rb(VALUE self, VALUE n)
     return n;
 }
 
+/* Float32 samples of the standard normal distribution N(0, 1). */
+static VALUE mlx_normal_rb(VALUE self, VALUE vshape)
+{
+    int shape[16];
+    size_t n = int_list(vshape, shape, 16, "dimensions");
+    mlx_array key = { 0 }; /* null: use the global key (see seed) */
+    mlx_array r = mlx_array_new();
+    if (mlx_random_normal(&r, shape, n, MLX_FLOAT32, 0.0f, 1.0f, key, g_stream)) { mlx_array_free(r); raise_mlx("normal"); }
+    return wrap(r);
+}
+
+/* Float32 samples of the uniform distribution on [0, 1). */
+static VALUE mlx_uniform_rb(VALUE self, VALUE vshape)
+{
+    int shape[16];
+    size_t n = int_list(vshape, shape, 16, "dimensions");
+    mlx_array low = mlx_array_new_float(0.0f);
+    mlx_array high = mlx_array_new_float(1.0f);
+    mlx_array key = { 0 };
+    mlx_array r = mlx_array_new();
+    int rc = mlx_random_uniform(&r, low, high, shape, n, MLX_FLOAT32, key, g_stream);
+    mlx_array_free(low);
+    mlx_array_free(high);
+    if (rc) { mlx_array_free(r); raise_mlx("uniform"); }
+    return wrap(r);
+}
+
 /* ---------- shape ---------- */
 
 static VALUE mlx_reshape_rb(VALUE self, VALUE va, VALUE vshape)
@@ -362,6 +389,20 @@ static VALUE mlx_stack_rb(VALUE self, VALUE vlist)
     int rc = mlx_stack(&r, v, g_stream);
     mlx_vector_array_free(v);
     if (rc) { mlx_array_free(r); raise_mlx("stack"); }
+    return wrap(r);
+}
+
+/* Joins a Ruby Array of arrays along an existing axis. */
+static VALUE mlx_concatenate_rb(VALUE self, VALUE vlist, VALUE vaxis)
+{
+    Check_Type(vlist, T_ARRAY);
+    mlx_vector_array v = mlx_vector_array_new();
+    for (long i = 0; i < RARRAY_LEN(vlist); i++) mlx_vector_array_append_value(v, get(rb_ary_entry(vlist, i)));
+    mlx_array r = mlx_array_new();
+    int rc = mlx_concatenate_axis(&r, v, NUM2INT(vaxis), g_stream);
+    mlx_vector_array_free(v);
+    RB_GC_GUARD(vlist);
+    if (rc) { mlx_array_free(r); raise_mlx("concatenate"); }
     return wrap(r);
 }
 
@@ -409,8 +450,12 @@ static VALUE mlx_max_rb(VALUE self, VALUE a, VALUE axes, VALUE keep) { return re
 static VALUE mlx_exp_rb(VALUE self, VALUE a) { return unary(a, mlx_exp, "exp"); }
 static VALUE mlx_log_rb(VALUE self, VALUE a) { return unary(a, mlx_log, "log"); }
 static VALUE mlx_sqrt_rb(VALUE self, VALUE a) { return unary(a, mlx_sqrt, "sqrt"); }
+static VALUE mlx_log1p_rb(VALUE self, VALUE a) { return unary(a, mlx_log1p, "log1p"); }
+static VALUE mlx_abs_rb(VALUE self, VALUE a) { return unary(a, mlx_abs, "abs"); }
 static VALUE mlx_maximum_rb(VALUE self, VALUE a, VALUE b) { return binary(a, b, mlx_maximum, "maximum"); }
+static VALUE mlx_minimum_rb(VALUE self, VALUE a, VALUE b) { return binary(a, b, mlx_minimum, "minimum"); }
 static VALUE mlx_greater_rb(VALUE self, VALUE a, VALUE b) { return compare_as_float(a, b, mlx_greater, "greater"); }
+static VALUE mlx_greater_equal_rb(VALUE self, VALUE a, VALUE b) { return compare_as_float(a, b, mlx_greater_equal, "greater_equal"); }
 static VALUE mlx_equal_rb(VALUE self, VALUE a, VALUE b) { return compare_as_float(a, b, mlx_equal, "equal"); }
 static VALUE mlx_matmul_rb(VALUE self, VALUE a, VALUE b) { return binary(a, b, mlx_matmul, "matmul"); }
 
@@ -646,10 +691,13 @@ void Init_maurograd_mlx(void)
     rb_define_module_function(mMLX, "ones", mlx_ones_rb, 1);
     rb_define_module_function(mMLX, "bernoulli", mlx_bernoulli_rb, 2);
     rb_define_module_function(mMLX, "seed", mlx_seed_rb, 1);
+    rb_define_module_function(mMLX, "normal", mlx_normal_rb, 1);
+    rb_define_module_function(mMLX, "uniform", mlx_uniform_rb, 1);
     rb_define_module_function(mMLX, "reshape", mlx_reshape_rb, 2);
     rb_define_module_function(mMLX, "transpose", mlx_transpose_rb, 2);
     rb_define_module_function(mMLX, "slice", mlx_slice_rb, 4);
     rb_define_module_function(mMLX, "stack", mlx_stack_rb, 1);
+    rb_define_module_function(mMLX, "concatenate", mlx_concatenate_rb, 2);
     rb_define_module_function(mMLX, "pad", mlx_pad_rb, 5);
     rb_define_module_function(mMLX, "sum", mlx_sum_rb, 3);
     rb_define_module_function(mMLX, "mean", mlx_mean_rb, 3);
@@ -657,8 +705,12 @@ void Init_maurograd_mlx(void)
     rb_define_module_function(mMLX, "exp", mlx_exp_rb, 1);
     rb_define_module_function(mMLX, "log", mlx_log_rb, 1);
     rb_define_module_function(mMLX, "sqrt", mlx_sqrt_rb, 1);
+    rb_define_module_function(mMLX, "log1p", mlx_log1p_rb, 1);
+    rb_define_module_function(mMLX, "abs", mlx_abs_rb, 1);
     rb_define_module_function(mMLX, "maximum", mlx_maximum_rb, 2);
+    rb_define_module_function(mMLX, "minimum", mlx_minimum_rb, 2);
     rb_define_module_function(mMLX, "greater", mlx_greater_rb, 2);
+    rb_define_module_function(mMLX, "greater_equal", mlx_greater_equal_rb, 2);
     rb_define_module_function(mMLX, "equal", mlx_equal_rb, 2);
     rb_define_module_function(mMLX, "argmax", mlx_argmax_rb, 2);
     rb_define_module_function(mMLX, "arange", mlx_arange_rb, 1);

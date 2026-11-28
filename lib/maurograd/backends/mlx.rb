@@ -117,6 +117,14 @@ module Maurograd
         Lib.seed(n)
       end
 
+      def normal(shape)
+        Lib.normal(shape)
+      end
+
+      def uniform(shape)
+        Lib.uniform(shape)
+      end
+
       # --- Shape --------------------------------------------------------------
 
       def reshape(x, *shape)
@@ -125,6 +133,22 @@ module Maurograd
 
       def transpose(x, *axes)
         Lib.transpose(x, axes)
+      end
+
+      def slice(x, axis, start, stop)
+        first = Array.new(x.shape.length, 0)
+        last = x.shape.dup
+        first[axis] = start
+        last[axis] = stop
+        Lib.slice(x, first, last, Array.new(x.shape.length, 1))
+      end
+
+      def pad(x, axis, before, after)
+        Lib.pad(x, [axis], [before], [after], 0.0)
+      end
+
+      def concat(arrays, axis)
+        Lib.concatenate(arrays, axis)
       end
 
       # --- Reductions ---------------------------------------------------------
@@ -153,6 +177,30 @@ module Maurograd
 
       def sqrt(x)
         Lib.sqrt(x)
+      end
+
+      def log1p(x)
+        Lib.log1p(x)
+      end
+
+      def abs(x)
+        Lib.abs(x)
+      end
+
+      def maximum(a, b)
+        Lib.maximum(a, b)
+      end
+
+      def minimum(a, b)
+        Lib.minimum(a, b)
+      end
+
+      def greater(a, b)
+        Lib.greater(a, b)
+      end
+
+      def greater_equal(a, b)
+        Lib.greater_equal(a, b)
       end
 
       def all_finite?(x)

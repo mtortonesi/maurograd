@@ -270,6 +270,14 @@ describe "MLX backend" do
       [back.eval.call(Maurograd::Tensor.new(x, backend: :mlx)).to_numo])
   end
 
+  it "matches CPU for slice, chunk and concat" do
+    Maurograd.seed!(26)
+    cpu, mlx = on_both(randn(2, 6, 3), randn(2, 2, 3)) do |a, b|
+      Maurograd.concat([a.slice(1, 1..4), b, a.chunk(2, axis: 1).last], axis: 1)
+    end
+    expect_match(cpu, mlx, tol: 1e-6)
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand

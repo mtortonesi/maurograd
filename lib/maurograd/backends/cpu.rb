@@ -81,6 +81,16 @@ module Maurograd
         ::Numo::NArray.srand(n)
       end
 
+      # Samples of the standard normal distribution N(0, 1).
+      def normal(shape)
+        ::Numo::SFloat.new(*shape).rand_norm
+      end
+
+      # Samples of the uniform distribution on [0, 1).
+      def uniform(shape)
+        ::Numo::SFloat.new(*shape).rand
+      end
+
       # --- Shape --------------------------------------------------------------
 
       def reshape(x, *shape)
@@ -90,6 +100,31 @@ module Maurograd
       # Permutes axes (all of them must be given, like NumPy's transpose).
       def transpose(x, *axes)
         x.transpose(*axes)
+      end
+
+      # Elements start...stop (stop excluded) along `axis`, everything along
+      # the other axes. On this backend, a view of x.
+      def slice(x, axis, start, stop)
+        index = Array.new(x.ndim, true)
+        index[axis] = start...stop
+        x[*index]
+      end
+
+      # x with `before` zeros in front and `after` zeros at the end of
+      # `axis`: the inverse of slice, for its backward pass.
+      def pad(x, axis, before, after)
+        shape = x.shape.dup
+        shape[axis] += before + after
+        out = x.class.zeros(*shape)
+        index = Array.new(x.ndim, true)
+        index[axis] = before...(before + x.shape[axis])
+        out[*index] = x
+        out
+      end
+
+      # Joins arrays of the same shape except along `axis`.
+      def concat(arrays, axis)
+        arrays.first.concatenate(*arrays.drop(1), axis: axis)
       end
 
       # --- Reductions ---------------------------------------------------------
@@ -126,6 +161,35 @@ module Maurograd
 
       def sqrt(x)
         ::Numo::NMath.sqrt(x)
+      end
+
+      # log(1 + x), accurate for x near 0 (where log(1 + x) would round 1 + x).
+      def log1p(x)
+        ::Numo::NMath.log1p(x)
+      end
+
+      def abs(x)
+        x.abs
+      end
+
+      # Elementwise maximum and minimum of two arrays, or of an array and a
+      # number.
+      def maximum(a, b)
+        ::Numo::SFloat.maximum(a, b)
+      end
+
+      def minimum(a, b)
+        ::Numo::SFloat.minimum(a, b)
+      end
+
+      # 1.0 where a > b (or a >= b), 0.0 elsewhere: masks for gradients.
+      # `a` is an array, `b` an array or a number.
+      def greater(a, b)
+        ::Numo::SFloat.cast(a.gt(b))
+      end
+
+      def greater_equal(a, b)
+        ::Numo::SFloat.cast(a.ge(b))
       end
 
       # True iff every element is finite (used by Maurograd.debug checks).
