@@ -12,11 +12,13 @@ module Maurograd
     # cheapest in terms of the output y, which forward already computed:
     # exp' = exp = y, sigmoid' = y * (1 - y), tanh' = 1 - y^2.
     #
-    # All of them are built from backend methods that already exist (exp,
-    # log and arithmetic), so they need no new kernels on any backend.
+    # All of them are built from backend methods (exp, log, comparisons and
+    # arithmetic), so they need no kernels of their own on any backend.
+    # Subclasses with a parameter (LeakyReLU's slope, Clamp's bounds) take
+    # it as a keyword argument after the input.
     class Elementwise
-      def self.apply(input)
-        new(input).forward
+      def self.apply(input, ...)
+        new(input, ...).forward
       end
 
       attr_reader :inputs
@@ -59,6 +61,12 @@ module Maurograd
       # and the result is 0, which is the right limit (not NaN).
       def sigmoid(bk, x)
         1.0 / (bk.exp(-x) + 1.0)
+      end
+
+      # log(1 + e^-|x|), which is between 0 and log 2 for every x and never
+      # overflows: the part softplus and log_sigmoid share.
+      def log1p_exp_neg_abs(bk, x)
+        bk.log1p(bk.exp(-bk.abs(x)))
       end
     end
 
@@ -113,6 +121,89 @@ module Maurograd
       def derivative(bk, x, _y)
         s = sigmoid(bk, x)
         s * ((x * (1.0 - s)) + 1.0)
+      end
+    end
+
+    # Softplus, log(1 + e^x): a smooth ReLU, always positive. Used to
+    # make a network output positive (a standard deviation, say), and the
+    # heart of binary cross-entropy with logits.
+    #
+    # Computed as max(x, 0) + log(1 + e^-|x|), which is the same function
+    # (for x > 0, log(1 + e^x) = x + log(1 + e^-x)) but can't overflow: the
+    # direct formula gives Infinity for x above about 88 in float32.
+    # d/dx = e^x / (1 + e^x) = sigmoid(x).
+    class Softplus < Elementwise
+      private
+
+      def compute(bk, x) = bk.maximum(x, 0.0) + log1p_exp_neg_abs(bk, x)
+
+      def derivative(bk, x, _y) = sigmoid(bk, x)
+    end
+
+    # log(sigmoid(x)) = -softplus(-x): the log-probability of a Bernoulli
+    # outcome 1 when x is its logit (and log_sigmoid(-x) that of 0), so a
+    # Bernoulli likelihood is x*log_sigmoid(z) + (1-x)*log_sigmoid(-z).
+    # Computing log(sigmoid(x)) directly gives log(0) = -Infinity once
+    # sigmoid(x) underflows, around x = -88 in float32; this form is
+    # min(x, 0) - log(1 + e^-|x|), finite everywhere.
+    # d/dx = 1 - sigmoid(x) = sigmoid(-x).
+    class LogSigmoid < Elementwise
+      private
+
+      def compute(bk, x) = bk.minimum(x, 0.0) - log1p_exp_neg_abs(bk, x)
+
+      def derivative(bk, x, _y) = sigmoid(bk, -x)
+    end
+
+    # Leaky ReLU: x for x > 0, negative_slope * x otherwise. Unlike ReLU,
+    # negative inputs keep a small gradient, so units can't "die"; the usual
+    # activation in GAN discriminators and energy-based models.
+    # d/dx = 1 for x > 0, negative_slope otherwise (at 0: negative_slope, as
+    # ReLU takes 0 there).
+    class LeakyReLU < Elementwise
+      def initialize(input, negative_slope: 0.01)
+        super(input)
+        @slope = Float(negative_slope)
+      end
+
+      private
+
+      def compute(bk, x) = x * slope_mask(bk, x)
+
+      def derivative(bk, x, _y) = slope_mask(bk, x)
+
+      # 1 where x > 0, the slope elsewhere.
+      def slope_mask(bk, x)
+        positive = bk.greater(x, 0.0)
+        positive + ((1.0 - positive) * @slope)
+      end
+    end
+
+    # Clamp (clip) to [min, max]; either bound may be nil. Used to keep
+    # values in a valid range, e.g. a log-variance, or pixels in [-1, 1]
+    # after sampling.
+    # d/dx = 1 inside [min, max], bounds included (as in PyTorch), and 0
+    # outside, where the output no longer depends on x.
+    class Clamp < Elementwise
+      def initialize(input, min: nil, max: nil)
+        super(input)
+        raise ArgumentError, "clamp needs a min:, a max:, or both" if min.nil? && max.nil?
+        raise ArgumentError, "clamp needs min <= max, got #{min} and #{max}" if min && max && min > max
+
+        @min = min&.to_f
+        @max = max&.to_f
+      end
+
+      private
+
+      def compute(bk, x)
+        y = @min ? bk.maximum(x, @min) : x
+        @max ? bk.minimum(y, @max) : y
+      end
+
+      def derivative(bk, x, _y)
+        inside = @min ? bk.greater_equal(x, @min) : bk.ones(x.shape)
+        @max ? inside * (1.0 - bk.greater(x, @max)) : inside
       end
     end
   end

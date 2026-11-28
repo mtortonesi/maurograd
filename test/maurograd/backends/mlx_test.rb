@@ -278,6 +278,14 @@ describe "MLX backend" do
     expect_match(cpu, mlx, tol: 1e-6)
   end
 
+  it "matches CPU for softplus, log_sigmoid, leaky_relu and clamp" do
+    Maurograd.seed!(27)
+    cpu, mlx = on_both(randn(4, 5) * 4.0) do |x|
+      x.softplus + x.log_sigmoid * 2.0 + x.leaky_relu(negative_slope: 0.1) * 3.0 + x.clamp(min: -1, max: 2) * 4.0
+    end
+    expect_match(cpu, mlx, tol: 1e-5)
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand

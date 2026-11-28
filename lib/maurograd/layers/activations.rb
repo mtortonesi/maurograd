@@ -19,5 +19,21 @@ module Maurograd
     class SiLU < Module
       def forward(input) = input.silu
     end
+
+    # Leaky ReLU, with a fixed negative slope (default 0.01).
+    class LeakyReLU < Module
+      attr_reader :negative_slope
+
+      def initialize(negative_slope: 0.01)
+        @negative_slope = negative_slope
+      end
+
+      def forward(input) = input.leaky_relu(negative_slope: @negative_slope)
+    end
+
+    # Softplus, log(1 + e^x): a smooth, positive ReLU.
+    class Softplus < Module
+      def forward(input) = input.softplus
+    end
   end
 end

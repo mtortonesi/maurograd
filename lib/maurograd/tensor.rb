@@ -294,6 +294,26 @@ module Maurograd
 
     def silu = Ops::SiLU.apply(self)
 
+    # log(1 + e^x), computed without overflow.
+    def softplus = Ops::Softplus.apply(self)
+
+    # log(sigmoid(x)), computed without underflow.
+    def log_sigmoid = Ops::LogSigmoid.apply(self)
+
+    def leaky_relu(negative_slope: 0.01) = Ops::LeakyReLU.apply(self, negative_slope: negative_slope)
+
+    # Clips to [min, max] (either may be nil).
+    def clamp(min: nil, max: nil) = Ops::Clamp.apply(self, min: min, max: max)
+
+    # The same data, cut off from the graph: a new leaf tensor that doesn't
+    # require grad, so nothing is backpropagated through it. Use it to treat
+    # a value as a constant, e.g. a GAN generator's samples when training
+    # the discriminator. The data is shared, not copied (ops never modify
+    # their inputs, so that's safe).
+    def detach
+      Tensor.new(@data, backend: @backend)
+    end
+
     def linear(weight, bias = nil)
       weight = Tensor.new(weight, backend: @backend) unless weight.is_a?(Tensor)
       bias = Tensor.new(bias, backend: @backend) if bias && !bias.is_a?(Tensor)

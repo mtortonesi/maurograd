@@ -40,6 +40,12 @@ version.
   into equal parts, e.g. a VAE encoder's output into mean and log-variance.
 - `Maurograd.concat(tensors, axis:)` (`Ops::Concat`), e.g. for the skip
   connections of a UNet.
+- `Tensor#softplus` and `#log_sigmoid`, computed so they never overflow or
+  underflow (`log(1 + e^x)` and `log(sigmoid(x))` directly give Infinity
+  and -Infinity for large inputs); `Tensor#leaky_relu(negative_slope:)`;
+  `Tensor#clamp(min:, max:)`; and the layers `Layers::LeakyReLU` and
+  `Layers::Softplus`.
+- `Tensor#detach`: the same data as a new leaf that stops gradients.
 - Backend methods `slice`, `pad`, `concat`, `normal`, `uniform`, `log1p`,
   `abs`, `maximum`, `minimum`, `greater` and `greater_equal`, on the CPU
   and MLX backends.
