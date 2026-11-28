@@ -19,6 +19,7 @@ require_relative "ops/reshape"
 require_relative "ops/elementwise"
 require_relative "ops/slice"
 require_relative "ops/concat"
+require_relative "ops/log_softmax"
 
 module Maurograd
   # Tensor is the core data structure of Maurograd.
@@ -301,6 +302,23 @@ module Maurograd
     def log_sigmoid = Ops::LogSigmoid.apply(self)
 
     def leaky_relu(negative_slope: 0.01) = Ops::LeakyReLU.apply(self, negative_slope: negative_slope)
+
+    # log(sum(exp(x))) over all elements or the given axes (same arguments
+    # as #sum), computed without overflow; see Ops::LogSumExp.
+    def logsumexp(axis: nil, keepdims: false)
+      Ops::LogSumExp.apply(self, axis: axis, keepdims: keepdims)
+    end
+
+    # Log-probabilities from logits along `axis`: x - logsumexp(x).
+    def log_softmax(axis: -1)
+      Ops::LogSoftmax.apply(self, axis: axis)
+    end
+
+    # Probabilities from logits along `axis`, summing to 1 there:
+    # exp(log_softmax(x)), so its gradient comes from those two ops.
+    def softmax(axis: -1)
+      log_softmax(axis: axis).exp
+    end
 
     # Clips to [min, max] (either may be nil).
     def clamp(min: nil, max: nil) = Ops::Clamp.apply(self, min: min, max: max)

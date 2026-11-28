@@ -286,6 +286,14 @@ describe "MLX backend" do
     expect_match(cpu, mlx, tol: 1e-5)
   end
 
+  it "matches CPU for logsumexp and log_softmax" do
+    Maurograd.seed!(28)
+    cpu, mlx = on_both(randn(3, 4, 5) * 5.0) do |x|
+      x.logsumexp(axis: [1, 2], keepdims: true) + x.log_softmax(axis: 1) + x.logsumexp(axis: -1).reshape(3, 4, 1)
+    end
+    expect_match(cpu, mlx, tol: 1e-5)
+  end
+
   it "trains LeNet identically to CPU for a few steps (SGD with momentum, then Adam)" do
     Maurograd.seed!(9)
     x = Numo::SFloat.new(16, 1, 28, 28).rand

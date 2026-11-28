@@ -56,6 +56,7 @@ module Maurograd
   require_relative "maurograd/ops/elementwise"
   require_relative "maurograd/ops/slice"
   require_relative "maurograd/ops/concat"
+  require_relative "maurograd/ops/log_softmax"
   require_relative "maurograd/ops/batchnorm2d"
   require_relative "maurograd/ops/dropout"
 

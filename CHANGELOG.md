@@ -46,6 +46,10 @@ version.
   `Tensor#clamp(min:, max:)`; and the layers `Layers::LeakyReLU` and
   `Layers::Softplus`.
 - `Tensor#detach`: the same data as a new leaf that stops gradients.
+- `Tensor#logsumexp(axis:, keepdims:)` (`Ops::LogSumExp`),
+  `Tensor#log_softmax(axis:)` (`Ops::LogSoftmax`) and `Tensor#softmax`,
+  computed with the maximum subtracted first, so they stay finite for
+  logits in the thousands.
 - Backend methods `slice`, `pad`, `concat`, `normal`, `uniform`, `log1p`,
   `abs`, `maximum`, `minimum`, `greater` and `greater_equal`, on the CPU
   and MLX backends.
